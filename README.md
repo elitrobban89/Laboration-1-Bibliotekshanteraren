@@ -4,9 +4,13 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Menysystemet är på plats och körbart. Menyvalen skriver just nu ut vad som valts — funktionaliteten bakom varje val implementeras steg för steg.
+Menysystemet är klart, inklusive felhantering. Datamodellen är påbörjad — `Book` finns som record. Menyvalen skriver just nu ut vad som valts; funktionaliteten bakom varje val implementeras steg för steg.
 
 - [x] Meny med loop och avslut
+- [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
+- [x] `Book` som record
+- [ ] `Member` och `Loan`
+- [ ] Datalagring i arrayer med fast storlek
 - [ ] Lägg till bok
 - [ ] Registrera medlem
 - [ ] Låna bok
@@ -17,13 +21,13 @@ Menysystemet är på plats och körbart. Menyvalen skriver just nu ut vad som va
 ## Krav
 
 - JDK 26 (projektet kompileras mot source/target 26 och använder `java.lang.IO` samt `main` utan parametrar)
-- Maven (wrapper medföljer: `mvnw` / `mvnw.cmd`)
+- Maven
 
 ## Bygga och köra
 
 ```bash
 # Bygg
-./mvnw clean package        # Windows: mvnw.cmd clean package
+mvn clean package
 
 # Kör
 java -cp target/classes org.example.CliApp
@@ -49,19 +53,28 @@ e. Avsluta
 
 Skriv siffran för önskat alternativ och tryck Enter. Skriv `e` för att avsluta programmet.
 
+### Felhantering
+
+Menyn tar emot all inmatning som text och tolkar den aldrig som ett tal, så bokstäver där siffror förväntas kan inte krascha programmet.
+
+- Ett val som inte finns i menyn (t.ex. `ghg` eller `9`) ger meddelandet `Ogiltigt val: '...'. Välj 1-6 eller e.` och menyn visas på nytt.
+- Om inströmmen tar slut (Ctrl+Z i Windows, Ctrl+D i Linux/macOS, eller pipad indata) avslutas programmet kontrollerat i stället för att kasta `NullPointerException`.
+
 ## Projektstruktur
 
 ```
-Bibliotekshanteraren/
-├── pom.xml
-└── src/
-    └── main/
-        └── java/
-            └── org/
-                └── example/
-                    └── CliApp.java     # meny och programloop
+src/main/java/org/example/
+├── CliApp.java   # meny, inläsning och programloop
+└── Book.java     # record: titel, författare, isbn
 ```
 
-## Författare
+## Datamodell
 
-Robert — Laboration 1, Javakurs
+`Book` är en record och därmed oföränderlig — inga set-metoder. Konstruktor, accessorer (`titel()`, `forfattare()`, `isbn()`), `equals()`, `hashCode()` och `toString()` genereras automatiskt.
+
+```java
+Book bok = new Book("Sagan om ringen", "Tolkien", "91-1-234567-8");
+bok.titel();   // "Sagan om ringen"
+```
+
+Utlåningsstatus lagras inte i boken, utan kommer att hanteras separat så att det går att se *vem* som lånat ett exemplar.
