@@ -4,17 +4,17 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Menysystemet är klart, inklusive felhantering. Datamodellen är komplett — `Book`, `Member` och `Loan` finns. Näst på tur står `Library`, som ska hålla arrayerna och koppla menyvalen till modellen. Menyvalen skriver just nu bara ut vad som valts.
+Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna, och menyval 1 och 2 är inkopplade: böcker och medlemmar kan läggas till och ligger kvar under körningen. Utlåningslogiken finns färdig i `Library.lanaBok()` men är ännu inte kopplad till menyval 3.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
 - [x] `Book` som record
 - [x] `Member` som klass med regeln `farLana()`
 - [x] `Loan` som kopplar ihop bok och medlem
-- [ ] `Library` med datalagring i arrayer med fast storlek
-- [ ] Lägg till bok
-- [ ] Registrera medlem
-- [ ] Låna bok
+- [x] `Library` med datalagring i arrayer med fast storlek
+- [x] Lägg till bok (menyval 1)
+- [x] Registrera medlem (menyval 2)
+- [ ] Låna bok — logiken klar i `Library`, menyval 3 inte inkopplat
 - [ ] Lämna tillbaka bok
 - [ ] Sök bok (titel eller författare)
 - [ ] Visa alla böcker och status
@@ -68,7 +68,8 @@ src/main/java/org/example/
 ├── CliApp.java   # meny, inläsning och programloop
 ├── Book.java     # record: titel, författare, isbn
 ├── Member.java   # klass: id, namn, antal aktiva lån
-└── Loan.java     # record: kopplar en medlem till en lånad bok
+├── Loan.java     # record: kopplar en medlem till en lånad bok
+└── Library.java  # lagring i arrayer samt reglerna för utlåning
 ```
 
 ## Datamodell
@@ -148,3 +149,67 @@ Ett lån är oföränderligt: det är antingen aktivt eller så finns det inte. 
 | `Book` | record | Värdetyp — en bok *är* sina värden och ändras aldrig |
 | `Member` | klass | Antalet aktiva lån ändras medan medlemmen behåller sin identitet |
 | `Loan` | record | En oföränderlig koppling; tas bort vid återlämning i stället för att ändras |
+
+## Lagring och regler
+
+`Library` äger all data och alla regler. Den skriver aldrig ut något — den svarar, och `CliApp` formulerar svaret för användaren. Samma uppdelning som i `Member.farLana()`, som returnerar `true`/`false` utan att säga något till användaren.
+
+### Arrayer med fast storlek
+
+Varje array har en räknare bredvid sig:
+
+```java
+private Book[] boklista = new Book[MAX_BOCKER];
+private int antalBocker = 0;
+```
+
+Arrayen är full storlek från start, men alla platser innehåller `null`. Räknaren markerar var det riktiga innehållet slutar:
+
+```
+index:     0      1      2      3      4     ...    99
+         [bok]  [bok]  [bok]  null   null   ...   null
+                               ↑
+                        antalBocker = 3
+```
+
+Därför går alla loopar till `antalBocker`, aldrig till `boklista.length`, och nästa insättning sker på plats `antalBocker`. `for`-each går inte att använda inne i `Library`, eftersom den skulle träffa `null`-platserna.
+
+Metoder som lägger till returnerar `boolean`: `false` när arrayen är full, så att `CliApp` kan skriva ett felmeddelande i stället för att programmet kraschar med `ArrayIndexOutOfBoundsException`.
+
+### Uppslagning
+
+Tre privata metoder med samma form — loopa till räknaren, jämför med `equals()`, returnera träffen eller `null`:
+
+| Metod | Söker i | Jämför |
+| --- | --- | --- |
+| `hittaBok(isbn)` | `boklista` | `boklista[i].isbn()` |
+| `hittaMedlem(id)` | `medlemmar` | `medlemmar[i].getId()` |
+| `hittaLan(isbn)` | `loans` | `loans[i].book().isbn()` |
+
+`null` betyder "finns inte" och är ett förväntat svar, inte ett fel.
+
+### Utlåning
+
+`lanaBok(isbn, medlemsId)` gör fyra kontroller innan lånet skapas, var och en med en tidig utgång:
+
+```java
+Book bok = hittaBok(isbn);
+if (bok == null) return false;              // boken finns inte
+
+if (hittaLan(isbn) != null) return false;   // redan utlånad
+
+Member medlem = hittaMedlem(medlemsId);
+if (medlem == null) return false;           // medlemmen finns inte
+if (!medlem.farLana()) return false;        // har nått MAX_LAN
+```
+
+Att lägga kontrollerna som *guard clauses* i stället för nästlade `if`-satser håller metoden platt och läsbar. Först när alla fyra passerat skapas `Loan`-objektet, räknaren ökas och medlemmens lånantal justeras.
+
+Verifierat genom testkörning: en bok kan lånas ut en gång, ett andra försök på samma bok nekas, okänt isbn och okänt medlems-id nekas, och det sjätte lånet för samma medlem stoppas av `farLana()`.
+
+## Att göra härnäst
+
+- Koppla menyval 3 till `Library.lanaBok()`
+- `aterlamna(isbn)` — hitta lånet, minska medlemmens räknare, ta bort posten ur `loans`
+- `sokBok(text)` för menyval 5
+- Metod som listar böcker med status för menyval 6, byggd på `hittaLan()`
