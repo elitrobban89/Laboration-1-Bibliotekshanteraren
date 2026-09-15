@@ -6,6 +6,11 @@ public class CliApp {
         do {
             printMenu();
             String val = IO.readln("Välj Menyalternativ: ");
+            if(val == null) {
+                IO.println("Felaktig input, programmet avslutas");
+                running = false;
+                continue;
+            }
             switch (val) {
                 case "1":
                     IO.println("Du har valt Lägg till bok");
@@ -28,6 +33,9 @@ public class CliApp {
                 case "e":
                     IO.println("Avslutar programmet");
                     running = false; //Avsluta programmet
+                    break;
+                default:
+                    IO.println("Ogiltigt val: '" + val + "'. Välj 1-6 eller e.");
             }
         } while (running);
     }
