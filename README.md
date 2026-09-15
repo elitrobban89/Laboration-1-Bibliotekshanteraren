@@ -4,14 +4,14 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Menysystemet är klart, inklusive felhantering. Datamodellen är påbörjad — `Book` och `Member` finns, `Loan` återstår. Menyvalen skriver just nu ut vad som valts; funktionaliteten bakom varje val implementeras steg för steg.
+Menysystemet är klart, inklusive felhantering. Datamodellen är komplett — `Book`, `Member` och `Loan` finns. Näst på tur står `Library`, som ska hålla arrayerna och koppla menyvalen till modellen. Menyvalen skriver just nu bara ut vad som valts.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
 - [x] `Book` som record
 - [x] `Member` som klass med regeln `farLana()`
-- [ ] `Loan` som kopplar ihop bok och medlem
-- [ ] Datalagring i arrayer med fast storlek
+- [x] `Loan` som kopplar ihop bok och medlem
+- [ ] `Library` med datalagring i arrayer med fast storlek
 - [ ] Lägg till bok
 - [ ] Registrera medlem
 - [ ] Låna bok
@@ -67,7 +67,8 @@ Menyn tar emot all inmatning som text och tolkar den aldrig som ett tal, så bok
 src/main/java/org/example/
 ├── CliApp.java   # meny, inläsning och programloop
 ├── Book.java     # record: titel, författare, isbn
-└── Member.java   # klass: id, namn, antal aktiva lån
+├── Member.java   # klass: id, namn, antal aktiva lån
+└── Loan.java     # record: kopplar en medlem till en lånad bok
 ```
 
 ## Datamodell
@@ -121,3 +122,29 @@ if (medlem.farLana()) {
 3. **Regeln hör ihop med det föränderliga fältet.** `MAX_LAN` och `antalLan` bor i samma klass, så villkoret för utlåning står bredvid det tillstånd det begränsar.
 
 Jämför med `Book`, där inget av detta gäller: en bok byter aldrig titel eller isbn, och två böcker med samma värden *ska* räknas som lika. Därav record i det ena fallet och klass i det andra.
+
+### `Loan`
+
+`Loan` kopplar ihop en medlem och en bok:
+
+```java
+public record Loan(Member member, Book book) { }
+```
+
+Fälten är objektreferenser och inte id-strängar. Det ger tre fördelar:
+
+1. **Ingen uppslagning.** `lan.book().titel()` och `lan.member().getNamn()` når uppgifterna direkt, utan att leta igenom arrayerna först.
+2. **Typsäkerhet.** Med `Loan(String, String)` hade det gått att råka skicka ett isbn där ett medlems-id ska vara — samma typ, inget kompileringsfel. Med `Member` och `Book` är det omöjligt.
+3. **En enda sanning om medlemmen.** `lan.member()` är samma objekt som ligger i medlemsarrayen, inte en kopia. Ändras lånräknaren syns det på båda ställena.
+
+Isbn behöver alltså inget eget fält i `Loan` — det nås genom `lan.book().isbn()` och finns därmed bara lagrat på ett ställe.
+
+Ett lån är oföränderligt: det är antingen aktivt eller så finns det inte. Återlämning innebär att posten tas bort ur arrayen i stället för att flaggas om, så `Loan` blir en record precis som `Book`.
+
+### Sammanfattning av formvalen
+
+| Typ | Form | Varför |
+| --- | --- | --- |
+| `Book` | record | Värdetyp — en bok *är* sina värden och ändras aldrig |
+| `Member` | klass | Antalet aktiva lån ändras medan medlemmen behåller sin identitet |
+| `Loan` | record | En oföränderlig koppling; tas bort vid återlämning i stället för att ändras |
