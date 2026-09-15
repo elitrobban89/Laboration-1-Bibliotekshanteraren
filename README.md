@@ -62,6 +62,15 @@ Menyn tar emot all inmatning som text och tolkar den aldrig som ett tal, så bok
 - Ett val som inte finns i menyn (t.ex. `ghg` eller `9`) ger meddelandet `Ogiltigt val: '...'. Välj 1-6 eller e.` och menyn visas på nytt.
 - Om inströmmen tar slut (Ctrl+Z i Windows, Ctrl+D i Linux/macOS, eller pipad indata) avslutas programmet kontrollerat i stället för att kasta `NullPointerException`.
 
+#### Inläsning med `java.lang.IO` i stället för `Scanner`
+
+All inläsning sker med `IO.readln()` från `java.lang.IO`, inte med `Scanner`. Valet är medvetet och gjort av robusthetsskäl:
+
+- `IO.readln()` returnerar `null` när inströmmen tar slut. `Scanner.nextLine()` kastar i stället `NoSuchElementException`, som måste fångas eller föregås av `hasNextLine()` för att programmet inte ska krascha.
+- Varje `null` hanteras redan i menyn och i samtliga inmatningsblock, så samma situation som hade krävt undantagshantering med `Scanner` täcks här av en vanlig `if`-sats.
+
+Funktionellt är de likvärdiga för den här uppgiften — båda läser en rad text i taget från standard in, och inget värde tolkas som tal i något av fallen.
+
 #### Validering av inmatade fält
 
 Menyval 1, 2 och 3 läser fritext från användaren. Varje block kör samma kedja innan värdena används:
