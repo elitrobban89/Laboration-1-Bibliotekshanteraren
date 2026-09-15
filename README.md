@@ -264,8 +264,7 @@ Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut n
 **Kända begränsningar.** `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre. Återlämningsdatumet räknas fram i `CliApp` vid utskriften och lagras inte i `Loan`, så systemet kan visa ett datum men inte avgöra om ett lån är försenat.
 
 ## Källkritik
-Jag har skrivit och comittat all Java-kod själv och rättat varje fel för hand; Anthropic Claude Code har förklarat, kompilerat och testkört. 
-Claude Code som guidning och förklaring när jag fastnat på vägen.
+Jag har skrivit och committat all Java-kod själv och rättat varje fel för hand. Anthropic Claude Code har förklarat, kompilerat och testkört koden, och jag har använt det som guidning och förklaring när jag fastnat på vägen.
 
 ## Att göra härnäst
 
