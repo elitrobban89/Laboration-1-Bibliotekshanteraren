@@ -112,9 +112,26 @@ public class CliApp {
                     }
                     break;
                 }
-                case "4":
-                    IO.println("Lämna tillbaka en bok");
-                    break;
+                case "4": {
+                    String isbn = IO.readln("Ange ISBN på boken som lämnas tillbaka: ");
+
+                    if (isbn == null) {
+                        IO.println("Avbruten inmatning av ISBN");
+                        break;
+                    }
+                    isbn = isbn.trim();
+                    if (isbn.isBlank()) {
+                        IO.println("Tomt ISBN. Fältet måste fyllas i.");
+                        break;
+                    }
+                    if(lib.aterlamnaBok(isbn)) {
+                        IO.println("Boken är återlämnad.");
+                    } else if (lib.hittaBok(isbn) == null) {
+                        IO.println("Det finns ingen bok med det ISBN:et.");
+                    } else {
+                            IO.println("Den boken är inte utlånad.");
+                    } break;
+                }
                 case "5":
                     IO.println("Sök bok (titel eller författare):");
                     break;

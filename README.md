@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna, och menyval 1, 2 och 3 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut, och allt ligger kvar under körningen. Vid utlåning visas ett återlämningsdatum tre veckor fram. Kvar står återlämning, sökning och statuslistan.
+Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna, och menyval 1-4 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut och lämnas tillbaka, och allt ligger kvar under körningen. Vid utlåning visas ett återlämningsdatum tre veckor fram. Kvar står sökning (menyval 5) och statuslistan (menyval 6).
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -15,7 +15,7 @@ Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håll
 - [x] `Library` med datalagring i arrayer med fast storlek
 - [x] Lägg till bok (menyval 1)
 - [x] Registrera medlem (menyval 2)
-- [x] Låna bok (menyval 3), med specifika felmeddelanden
+- [x] Lämna tillbaka bok (menyval 4)
 - [ ] Lämna tillbaka bok
 - [ ] Sök bok (titel eller författare)
 - [ ] Visa alla böcker och status
@@ -286,6 +286,41 @@ Priset är att `hittaBok()`, `hittaMedlem()` och `hittaLan()` fick ändras från
 
 Alla fem utfallen är verifierade genom körning: lyckad utlåning, redan utlånad bok, okänt isbn, okänt medlems-id och nått lånetak.
 
+### Återlämning
+
+`aterlamnaBok(isbn)` är motsatsen till utlåning, och den enda metoden som tar bort något ur en array.
+
+Till skillnad från de andra uppslagningarna kan den inte använda `hittaLan()`. Den metoden returnerar lånet men kastar bort **var** i arrayen det låg, och för att ta bort en post krävs just indexet. Därför loopar `aterlamnaBok()` själv:
+
+```java
+for (int i = 0; i < antalAktivaLan; i++) {
+    if (loans[i].book().isbn().equals(isbn)) {
+        Member medlem = loans[i].member();
+        medlem.setAntalLan(medlem.getAntalLan() - 1);
+
+        loans[i] = loans[antalAktivaLan - 1];   // flytta sista posten till luckan
+        loans[antalAktivaLan - 1] = null;       // töm sista platsen
+        antalAktivaLan--;                       // krymp det använda området
+        return true;
+    }
+}
+return false;
+```
+
+En array kan inte krympa, så borttagning betyder att skriva något annat på platsen. Den sista aktiva posten flyttas in i luckan och räknaren minskas med ett:
+
+```
+före:    [lån0] [lån1] [lån2] [lån3]  null ...     antalAktivaLan = 4
+                  ↑ ska bort
+efter:   [lån0] [lån3] [lån2]  null   null ...     antalAktivaLan = 3
+```
+
+Ordningen bland lånen kastas om, vilket är harmlöst eftersom lån aldrig slås upp på position utan alltid på isbn. Alternativet — att skifta alla efterföljande poster ett steg åt vänster — bevarar ordningen men kostar en extra loop utan att ge något.
+
+Att `medlem` hämtas ur lånet och inte slås upp separat är samma poäng som tidigare: `loans[i].member()` **är** objektet i medlemsarrayen, så lånräknaren minskas på rätt person utan uppslagning.
+
+Verifierat genom körning: att återlämna det första av tre aktiva lån tar bort rätt post, lämnar de två andra sökbara trots omflyttningen, minskar medlemmens räknare, och gör boken utlåningsbar igen. Återlämning av en bok som inte är utlånad, och av ett okänt isbn, ger båda `false` med skilda felmeddelanden i menyn.
+
 ## Beskrivning av lösningen
 
 Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
@@ -311,6 +346,5 @@ Jag har skrivit och committat all Java-kod själv och rättat varje fel för han
 
 ## Att göra härnäst
 
-- `aterlamna(isbn)` — hitta lånet, minska medlemmens räknare, ta bort posten ur `loans`
-- `sokBok(text)` för menyval 5
+- `sokBok(text)` för menyval 5 — delsträngsmatchning på titel och författare
 - Metod som listar böcker med status för menyval 6, byggd på `hittaLan()`

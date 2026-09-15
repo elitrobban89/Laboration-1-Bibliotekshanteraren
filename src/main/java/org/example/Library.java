@@ -100,4 +100,19 @@ public class Library {
         }
         return false; //Array är full utgång
     }
+    public boolean aterlamnaBok(String isbn) {
+        Book bok = hittaBok(isbn);
+        if (bok == null) return false;
+
+        for (int i = 0; i < antalAktivaLan; i++) {
+            if(loans[i].book().isbn().equals(isbn)) { //Om man återlämnar en bok
+                Member medlem = loans[i].member();
+                medlem.setAntalLan(medlem.getAntalLan() - 1); //Ta bort lånet utav boken
+                loans[i] = loans[antalAktivaLan - 1];
+                loans[antalAktivaLan - 1] = null;
+                antalAktivaLan--;
+                return true;
+            }
+        } return false;
+    }
 }
