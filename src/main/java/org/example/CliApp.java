@@ -25,9 +25,23 @@ public class CliApp {
                         break;
                     }
 
+                    /** Använder trimning
+                     * Skriver användaren av vana ett mellanslag efter isbn-numret hittas boken aldrig, och felmeddelandet blir
+                     *   "Det finns ingen bok med det ISBN:et" trots att den ligger i arrayen.
+                     */
+                    titel = titel.trim(); //Trimmar värdena så vi kan
+                    forfattare = forfattare.trim();
+                    isbn = isbn.trim();
+
+                    if (titel.isBlank() || forfattare.isBlank() || isbn.isBlank()) {
+                        IO.println("Tom input, alla fält måste fyllas i.");
+                        break;
+                    }
                     Book bok = new Book(titel, forfattare, isbn);
                     if (lib.laggTillBok(bok)) {
                         IO.println("Bok " + bok.titel() + " har lagts till");
+                    } else if (lib.hittaBok(isbn) != null) {
+                        IO.println("Bok med ISBN " + isbn + " finns redan.");
                     } else {
                         IO.println("Biblioteket är fullt.");
                     }
@@ -40,13 +54,27 @@ public class CliApp {
 
                     if (id == null || namn == null) {
                         IO.println("Felaktig input, programmet avslutas");
-                    break;
-                }
+                        break;
+                    }
+
+                    /** Använder trimning
+                     * Skriver användaren av vana ett mellanslag efter isbn-numret hittas boken aldrig, och felmeddelandet blir
+                     *   "Det finns ingen bok med det ISBN:et" trots att den ligger i arrayen.
+                     */
+                    id = id.trim(); //Trimmar värdena
+                    namn = namn.trim();
+
+                    if (id.isBlank() || namn.isBlank()) {
+                        IO.println("Tomt medlemsid eller namn. Fälten måste fyllas i.");
+                        break;
+                    }
                     Member medlem = new Member(id, namn, 0);
                     if (lib.registreraMedlem(medlem)) {
                         IO.println("Medlem " + namn + " registrerad.");
+                    } else if (lib.hittaMedlem(id) != null) {
+                        IO.println("Medlem med medlems-id " + id + " finns redan.");
                     } else {
-                        IO.println("Medlemsregistrer är fullt.");
+                        IO.println("Medlemsregistret är fullt.");
                     }
                     break;
                 }
@@ -54,15 +82,25 @@ public class CliApp {
                 case "3": {
                     String isbn = IO.readln("Ange ISBN på boken: ");
                     String medlemsId = IO.readln("Ange medlems-id: ");
-                    if(isbn == null || medlemsId == null) {
+                    if (isbn == null || medlemsId == null) {
                         IO.println("Felaktig input, programmet avslutas");
                         break;
                     }
-                    if (lib.lanaBok(isbn,medlemsId)) {
+                    /** Använder trimning
+                     * Skriver användaren av vana ett mellanslag efter isbn-numret hittas boken aldrig, och felmeddelandet blir
+                     *   "Det finns ingen bok med det ISBN:et" trots att den ligger i arrayen.
+                     */
+                    isbn = isbn.trim(); //Trimmar värdena
+                    medlemsId = medlemsId.trim();
+
+                    if (isbn.isBlank() || medlemsId.isBlank()) {
+                        IO.println("Tomt värde på ISBN eller medlemsId. Fälten måste fyllas i.");
+                        break;
+                    }
+                    if (lib.lanaBok(isbn, medlemsId)) {
                         IO.println("Boken lånas ut tom datumet: " + LocalDate.now().plusWeeks(3)); //Vi lånar ut boken till medlemmen i 3 veckor från dagens datum
                     } else if (lib.hittaBok(isbn) == null) {
                         IO.println("Det finns ingen bok med det ISBN:et.");
-
                     } else if (lib.hittaLan(isbn) != null) {
                         IO.println("Boken är redan utlånad.");
 

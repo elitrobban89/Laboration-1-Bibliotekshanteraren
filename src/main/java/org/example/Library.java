@@ -76,6 +76,8 @@ public class Library {
      * Metod som registrerar medlem med kontroller
      */
     public boolean registreraMedlem(Member medlem) {
+        if(hittaMedlem(medlem.getId()) != null) return false;
+
         if (antalMedlemmar < MAX_MEDLEMMAR) {
             medlemmar[antalMedlemmar] = medlem;
             antalMedlemmar++;
@@ -87,8 +89,10 @@ public class Library {
 
     /**
      * Lägger till bok i boklistan så man kan låna den
+     * Dubblettkontroll införd.
      */
     public boolean laggTillBok(Book bok) {
+        if (hittaBok(bok.isbn()) != null) return false; //Dublettkontroll om boken redan finns i arrayen
         if (antalBocker < MAX_BOCKER) {
             boklista[antalBocker] = bok;
             antalBocker++;

@@ -8,6 +8,7 @@ Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håll
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
+- [x] Validering av inmatade fält: tomma värden, blanksteg och dubbletter
 - [x] `Book` som record
 - [x] `Member` som klass med regeln `farLana()`
 - [x] `Loan` som kopplar ihop bok och medlem
@@ -60,6 +61,48 @@ Menyn tar emot all inmatning som text och tolkar den aldrig som ett tal, så bok
 
 - Ett val som inte finns i menyn (t.ex. `ghg` eller `9`) ger meddelandet `Ogiltigt val: '...'. Välj 1-6 eller e.` och menyn visas på nytt.
 - Om inströmmen tar slut (Ctrl+Z i Windows, Ctrl+D i Linux/macOS, eller pipad indata) avslutas programmet kontrollerat i stället för att kasta `NullPointerException`.
+
+#### Validering av inmatade fält
+
+Menyval 1, 2 och 3 läser fritext från användaren. Varje block kör samma kedja innan värdena används:
+
+```java
+if (titel == null || forfattare == null || isbn == null) { ... break; }   // tom ström
+
+titel = titel.trim();                                                     // putsa kanterna
+forfattare = forfattare.trim();
+isbn = isbn.trim();
+
+if (titel.isBlank() || forfattare.isBlank() || isbn.isBlank()) { ... break; }   // tomt fält
+```
+
+Ordningen är tvingande. `null`-kontrollen måste komma först, eftersom `null.trim()` skulle kasta just det undantag kontrollen finns för att undvika. Trimningen måste komma före `isBlank()`, så att ett fält med bara blanksteg blir tomt och fångas.
+
+Trimningen gör också att uppslagningar fungerar som användaren förväntar sig: `hittaBok()` jämför med `equals()`, där blanksteg räknas som tecken, så `" 91-1 "` hade annars aldrig matchat en bok lagrad som `"91-1"`.
+
+#### Dubbletter
+
+`laggTillBok()` och `registreraMedlem()` avvisar värden som redan finns:
+
+```java
+if (hittaBok(bok.isbn()) != null) return false;
+if (hittaMedlem(medlem.getId()) != null) return false;
+```
+
+Utan dem hade en andra bok med samma isbn hamnat i arrayen men aldrig gått att nå, eftersom `hittaBok()` alltid returnerar första träffen. Regeln ligger i `Library` och inte i `CliApp`, så den gäller oavsett vem som anropar metoden.
+
+Eftersom `false` då betyder två olika saker — dubblett eller fullt register — ställer `CliApp` en följdfråga och väljer meddelande därefter, på samma sätt som vid utlåning.
+
+#### Sammanställning
+
+| Felaktig inmatning | Vad som händer |
+| --- | --- |
+| Bokstäver där siffror väntas | Inget parsas som tal; `default` fångar ogiltiga menyval |
+| Tom ström (Ctrl+Z / Ctrl+D) | `null`-kontroll avbryter menyvalet |
+| Tomt fält eller bara blanksteg | `isBlank()` avvisar med felmeddelande |
+| Blanksteg runt värden | `trim()` putsar innan värdet lagras eller söks upp |
+| Befintligt isbn eller medlems-id | Avvisas av dubblettvakten i `Library` |
+| Okänd bok, okänd medlem, utlånad bok, nått lånetak | Egna felmeddelanden via `else if`-kedjan |
 
 ## Projektstruktur
 
