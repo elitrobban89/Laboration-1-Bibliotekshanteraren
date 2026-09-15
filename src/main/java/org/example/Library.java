@@ -76,7 +76,7 @@ public class Library {
      * Metod som registrerar medlem med kontroller
      */
     public boolean registreraMedlem(Member medlem) {
-        if(hittaMedlem(medlem.getId()) != null) return false;
+        if (hittaMedlem(medlem.getId()) != null) return false;
 
         if (antalMedlemmar < MAX_MEDLEMMAR) {
             medlemmar[antalMedlemmar] = medlem;
@@ -100,12 +100,13 @@ public class Library {
         }
         return false; //Array är full utgång
     }
+
     public boolean aterlamnaBok(String isbn) {
         Book bok = hittaBok(isbn);
         if (bok == null) return false;
 
         for (int i = 0; i < antalAktivaLan; i++) {
-            if(loans[i].book().isbn().equals(isbn)) { //Om man återlämnar en bok
+            if (loans[i].book().isbn().equals(isbn)) { //Om man återlämnar en bok
                 Member medlem = loans[i].member();
                 medlem.setAntalLan(medlem.getAntalLan() - 1); //Ta bort lånet utav boken
                 loans[i] = loans[antalAktivaLan - 1];
@@ -113,6 +114,20 @@ public class Library {
                 antalAktivaLan--;
                 return true;
             }
-        } return false;
+        }
+        return false;
+    }
+
+    /**
+     * //Vi använder en kopia av Book arrayen för att kunna returnera en kopia av boklistan för användaren
+     *
+     * @return
+     */
+    public Book[] getAllaBocker() {
+        Book[] kopia = new Book[antalBocker];
+        for (int i = 0; i < antalBocker; i++) {
+            kopia[i] = boklista[i];
+        }
+        return kopia;
     }
 }

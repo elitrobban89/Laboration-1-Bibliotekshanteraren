@@ -14,6 +14,7 @@ public class CliApp {
                 running = false;
                 continue;
             }
+            val = val.trim(); //Vi trimmar även val så man inte får in ett blanksteg i slutet av menyalternativet
             switch (val) {
                 case "1": {
                     String titel = IO.readln("Titel: ");
@@ -124,42 +125,59 @@ public class CliApp {
                         IO.println("Tomt ISBN. Fältet måste fyllas i.");
                         break;
                     }
-                    if(lib.aterlamnaBok(isbn)) {
+                    if (lib.aterlamnaBok(isbn)) {
                         IO.println("Boken är återlämnad.");
                     } else if (lib.hittaBok(isbn) == null) {
                         IO.println("Det finns ingen bok med det ISBN:et.");
                     } else {
-                            IO.println("Den boken är inte utlånad.");
-                    } break;
+                        IO.println("Den boken är inte utlånad.");
+                    }
+                    break;
                 }
                 case "5":
                     IO.println("Sök bok (titel eller författare):");
                     break;
-                case "6":
-                    IO.println("Visa alla böcker och status:");
-                    break;
-                case "e":
-                    IO.println("Avslutar programmet");
-                    running = false; //Avsluta programmet
-                    break;
-                default:
-                    IO.println("Ogiltigt val: '" + val + "'. Välj 1-6 eller e.");
-            }
-        } while (running);
-    }
+                case "6": {
+                    Book[] bocker = lib.getAllaBocker(); //Kör metoden inuti Library. Skapar kopia av boklistan
 
-    public static void printMenu() {
-        String menyText = """
-                       Bibliotekshanteraren
-                       ====================
-                       1. Lägg till bok
-                       2. Registrera medlem
-                       3. Låna bok
-                       4. Lämna tillbaka bok
-                       5. Sök bok (titel eller författare)
-                       6. Visa alla böcker och status
-                       e. Avsluta
-                """;
-        IO.println(menyText);
-    }
+                    if (bocker.length == 0) {
+                        IO.println("Inga böcker i biblioteket.");
+                        break;
+                    }
+                    for (Book bok : bocker) { //Skriver ut boklistan
+                        Loan lan = lib.hittaLan(bok.isbn());
+
+                        String status;
+                        if (lan == null) {
+                            status = "Tillgänglig";
+                        } else {
+                            status = "Utlånad till " + lan.member().getNamn();
+                        }
+                        IO.println(bok.titel() + " - " + bok.forfattare() + " - " + bok.isbn() + " - " + status);
+                    } break;
+                }
+            case "e":
+                IO.println("Avslutar programmet");
+                running = false; //Avsluta programmet
+                break;
+            default:
+                IO.println("Ogiltigt val: '" + val + "'. Välj 1-6 eller e.");
+        }
+    } while(running);
+}
+
+public static void printMenu() {
+    String menyText = """
+                   Bibliotekshanteraren
+                   ====================
+                   1. Lägg till bok
+                   2. Registrera medlem
+                   3. Låna bok
+                   4. Lämna tillbaka bok
+                   5. Sök bok (titel eller författare)
+                   6. Visa alla böcker och status
+                   e. Avsluta
+            """;
+    IO.println(menyText);
+}
 }

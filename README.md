@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna, och menyval 1-4 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut och lämnas tillbaka, och allt ligger kvar under körningen. Vid utlåning visas ett återlämningsdatum tre veckor fram. Kvar står sökning (menyval 5) och statuslistan (menyval 6).
+Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna. Menyval 1, 2, 3, 4 och 6 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut och lämnas tillbaka, och hela beståndet kan listas med aktuell utlåningsstatus. Vid utlåning visas ett återlämningsdatum tre veckor fram. Kvar för godkänt står endast sökningen, menyval 5.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -15,10 +15,10 @@ Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håll
 - [x] `Library` med datalagring i arrayer med fast storlek
 - [x] Lägg till bok (menyval 1)
 - [x] Registrera medlem (menyval 2)
+- [x] Låna bok (menyval 3), med specifika felmeddelanden
 - [x] Lämna tillbaka bok (menyval 4)
-- [ ] Lämna tillbaka bok
-- [ ] Sök bok (titel eller författare)
-- [ ] Visa alla böcker och status
+- [ ] Sök bok på del av titel eller författare (menyval 5)
+- [x] Visa alla böcker med status (menyval 6)
 
 ## Krav
 
@@ -88,6 +88,8 @@ if (titel.isBlank() || forfattare.isBlank() || isbn.isBlank()) { ... break; }   
 Ordningen är tvingande. `null`-kontrollen måste komma först, eftersom `null.trim()` skulle kasta just det undantag kontrollen finns för att undvika. Trimningen måste komma före `isBlank()`, så att ett fält med bara blanksteg blir tomt och fångas.
 
 Trimningen gör också att uppslagningar fungerar som användaren förväntar sig: `hittaBok()` jämför med `equals()`, där blanksteg räknas som tecken, så `" 91-1 "` hade annars aldrig matchat en bok lagrad som `"91-1"`.
+
+Även själva menyvalet trimmas innan det matchas i `switch`-satsen, så att `" 6 "` väljer statuslistan i stället för att avvisas som ogiltigt val. Någon `isBlank()`-kontroll behövs inte där — en tom sträng matchar inget `case` och hamnar i `default`, vilket är rätt beteende.
 
 #### Dubbletter
 
@@ -330,6 +332,40 @@ Att `medlem` hämtas ur lånet och inte slås upp separat är samma poäng som t
 
 Verifierat genom körning: att återlämna det första av tre aktiva lån tar bort rätt post, lämnar de två andra sökbara trots omflyttningen, minskar medlemmens räknare, och gör boken utlåningsbar igen. Återlämning av en bok som inte är utlånad, och av ett okänt isbn, ger båda `false` med skilda felmeddelanden i menyn.
 
+### Statuslistan
+
+Menyval 6 ska visa alla böcker med status — tillgänglig eller utlånad, och i så fall till vem. Det kräver att `Library` lämnar ut hela beståndet, vilket väcker frågan hur en klass delar med sig av sin data utan att ge bort kontrollen över den.
+
+`getAllaBocker()` returnerar därför en **kopia i exakt rätt storlek**, inte den interna arrayen:
+
+```java
+public Book[] getAllaBocker() {
+    Book[] kopia = new Book[antalBocker];
+    for (int i = 0; i < antalBocker; i++) {
+        kopia[i] = boklista[i];
+    }
+    return kopia;
+}
+```
+
+Två skäl till att inte returnera `boklista` rakt av:
+
+1. **Den interna arrayen är mestadels tom.** Med tre böcker inlagda följer 97 `null`-platser med, och en `for`-each över den kraschar direkt. Kopian är `antalBocker` lång och innehåller inga `null`, vilket gör att anroparen kan använda `for`-each och `.length` utan att känna till räknarmönstret.
+2. **Inkapslingen skulle gå förlorad.** Den som får referensen till `boklista` kan skriva `bocker[0] = null` och ändra bibliotekets innehåll utifrån, förbi alla kontroller. Ändringar i kopian påverkar ingenting.
+
+Kopieringen sker med en egen loop i stället för `java.util.Arrays.copyOf()`, i linje med uppgiftens inriktning på manuell arrayhantering.
+
+Statusen lagras inte någonstans utan läses ur `loans` vid varje visning:
+
+```java
+Loan lan = lib.hittaLan(bok.isbn());
+String status = (lan == null) ? "Tillgänglig" : "Utlånad till " + lan.member().getNamn();
+```
+
+Eftersom `hittaLan()` svarar på både om boken är utlånad och till vem, täcks kravets båda halvor av ett enda anrop. Att statusen härleds i stället för att lagras gör att listan aldrig kan hamna i otakt med verkligheten — verifierat genom körning: samma bok visas som utlånad till Anna före återlämning och som tillgänglig direkt efter, utan att någon status uppdaterats explicit.
+
+Ett tomt bibliotek fångas före loopen och ger beskedet "Inga böcker i biblioteket." i stället för tystnad.
+
 ## Beskrivning av lösningen
 
 Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
@@ -356,4 +392,3 @@ Jag har skrivit och committat all Java-kod själv och rättat varje fel för han
 ## Att göra härnäst
 
 - `sokBok(text)` för menyval 5 — delsträngsmatchning på titel och författare
-- Metod som listar böcker med status för menyval 6, byggd på `hittaLan()`
