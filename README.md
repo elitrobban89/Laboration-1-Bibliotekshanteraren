@@ -238,8 +238,8 @@ Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut n
 **Kända begränsningar.** `lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl, så gränssnittet kan bara ge ett allmänt felmeddelande. `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre.
 
 ## Källkritik
-
-<!-- Fyll i: vilka källor du använt (kurslitteratur, dokumentation, AI-stöd) och hur du förhållit dig till dem. -->
+Jag har skrivit och comittat all Java-kod själv och rättat varje fel för hand; Anthropic Claude Code har förklarat, kompilerat och testkört. 
+Claude Code som guidning och förklaring när jag fastnat på vägen.
 
 ## Att göra härnäst
 
