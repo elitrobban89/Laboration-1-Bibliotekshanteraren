@@ -154,7 +154,19 @@ Ett lån är oföränderligt: det är antingen aktivt eller så finns det inte. 
 
 `Library` äger all data och alla regler. Den skriver aldrig ut något — den svarar, och `CliApp` formulerar svaret för användaren. Samma uppdelning som i `Member.farLana()`, som returnerar `true`/`false` utan att säga något till användaren.
 
-### Arrayer med fast storlek
+### Tre arrayer med fast storlek
+
+`Library` håller tre arrayer, alla med fast storlek:
+
+```java
+private Book[] boklista = new Book[MAX_BOCKER];        // alla böcker
+private Member[] medlemmar = new Member[MAX_MEDLEMMAR]; // alla medlemmar
+private Loan[] loans = new Loan[MAX_BOCKER];            // aktiva lån
+```
+
+`loans` är strukturen som håller reda på **vilka böcker som är utlånade och till vem**. Varje `Loan` pekar på både boken och medlemmen, så `hittaLan(isbn)` svarar på om en bok är utlånad, och `lan.member()` på till vem. En bok som inte förekommer i `loans` är tillgänglig — utlåningsstatus lagras alltså aldrig i `Book` själv.
+
+Lånearrayen är lika stor som boklistan, eftersom en bok bara kan vara utlånad till en person åt gången. Fler aktiva lån än böcker kan därför aldrig uppstå.
 
 Varje array har en räknare bredvid sig:
 
