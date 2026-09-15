@@ -219,6 +219,28 @@ Att lägga kontrollerna som *guard clauses* i stället för nästlade `if`-satse
 
 Verifierat genom testkörning: en bok kan lånas ut en gång, ett andra försök på samma bok nekas, okänt isbn och okänt medlems-id nekas, och det sjätte lånet för samma medlem stoppas av `farLana()`.
 
+## Beskrivning av lösningen
+
+Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
+
+Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut något. All kommunikation går genom metodanrop med returvärden.
+
+## Reflektion kring designval
+
+**Record kontra klass.** Det viktigaste valet i projektet. `Book` och `Loan` blev records eftersom de är oföränderliga värdetyper — en bok *är* sin titel, författare och isbn, och ett lån *är* kopplingen mellan en bok och en medlem. `Member` blev en vanlig klass eftersom antalet aktiva lån ändras över tid medan medlemmen behåller sin identitet. Skillnaden är inte bara stilistisk: i en record ingår alla fält i den genererade `equals()`, så samma medlem med olika antal lån hade räknats som två olika medlemmar. Som klass jämförs objekt på referens och medlemmar slås upp på `getId()`.
+
+**Ansvarsfördelning.** `Library` svarar, `CliApp` pratar. `farLana()` returnerar `true`/`false` i stället för att skriva ut ett meddelande, och `laggTillBok()` returnerar `false` när arrayen är full i stället för att krascha. Det gör reglerna testbara oberoende av terminalen, och felmeddelandena kan formuleras på ett enda ställe.
+
+**Objektreferenser i `Loan`.** `Loan` håller `Member` och `Book` direkt i stället för id-strängar. Det ger typsäkerhet — kompilatorn hindrar att ett isbn skickas där ett medlems-id ska vara — och slipper uppslagningar vid varje utskrift. Viktigast är att `lan.member()` är samma objekt som ligger i medlemsarrayen, så lånräknaren aldrig kan hamna i otakt mellan de två.
+
+**Fasta arrayer.** Uppgiften kräver arrayer med fast storlek, vilket innebär att varje array måste kompletteras med en egen räknare och att varje loop måste gå till räknaren i stället för till `length`. Det är mer bokföring än en `ArrayList` hade krävt, men det tvingar fram en tydlig bild av skillnaden mellan arrayens storlek och dess innehåll.
+
+**Kända begränsningar.** `lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl, så gränssnittet kan bara ge ett allmänt felmeddelande. `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre.
+
+## Källkritik
+
+<!-- Fyll i: vilka källor du använt (kurslitteratur, dokumentation, AI-stöd) och hur du förhållit dig till dem. -->
+
 ## Att göra härnäst
 
 - Koppla menyval 3 till `Library.lanaBok()`
