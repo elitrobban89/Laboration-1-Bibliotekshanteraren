@@ -1,18 +1,53 @@
 package org.example;
 
-/** Record för member klassen
- * Fälten blir private final automatiskt så man skriver inte det nedan.
- * private static final int MAX_LAN = 5; Sätter MAX_LAN till 5
+/**
+ * En medlem i biblioteket.
+ * Till skillnad från Book är detta en vanlig klass, eftersom antalet aktiva
+ * lån ändras över tid medan medlemmen behåller sin identitet.
  */
-public record Member(String id, String namn, int antalLan) {
+public class Member {
 
+    /**
+     * Högsta antal aktiva lån en medlem får ha samtidigt.
+     */
     private static final int MAX_LAN = 5;
 
-    /** Metod för kontroll om man får låna fler böcker
-     *
+    private final String id;
+    private final String namn;
+    private int antalLan;
+
+    /**
+     * Konstruktor
      */
-    public boolean farLanaFler() {
-    return antalLan < MAX_LAN;
+    public Member(String id, String namn, int antalLan) {
+        this.id = id;
+        this.namn = namn;
+        this.antalLan = antalLan;
     }
 
+    /**
+     * GetMetoder
+     */
+    public int getAntalLan() {
+        return antalLan;
+    }
+
+    public void setAntalLan(int antalLan) {
+        this.antalLan = antalLan;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getNamn() {
+        return namn;
+    }
+
+    /**
+     * Egen metod för kontroll om man får låna fler böcker
+     */
+    public boolean farLana() {
+        return antalLan < MAX_LAN;
+    }
 }

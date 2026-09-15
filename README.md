@@ -9,7 +9,7 @@ Menysystemet är klart, inklusive felhantering. Datamodellen är påbörjad — 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
 - [x] `Book` som record
-- [x] `Member` med regeln `farLanaFler()`
+- [x] `Member` som klass med regeln `farLana()`
 - [ ] `Loan` som kopplar ihop bok och medlem
 - [ ] Datalagring i arrayer med fast storlek
 - [ ] Lägg till bok
@@ -67,7 +67,7 @@ Menyn tar emot all inmatning som text och tolkar den aldrig som ett tal, så bok
 src/main/java/org/example/
 ├── CliApp.java   # meny, inläsning och programloop
 ├── Book.java     # record: titel, författare, isbn
-└── Member.java   # record: id, namn, antal aktiva lån
+└── Member.java   # klass: id, namn, antal aktiva lån
 ```
 
 ## Datamodell
@@ -94,21 +94,30 @@ En bok är en **värdetyp** — den definieras helt av sina värden och har inge
 
 ### `Member`
 
-`Member` har `id`, `namn` och `antalLan` samt en egen metod som avgör om medlemmen får låna fler böcker:
+`Member` är en vanlig klass med privata fält, konstruktor, getmetoder och en egen metod som avgör om medlemmen får låna fler böcker:
 
 ```java
 Member medlem = new Member("M01", "Anna", 3);
-medlem.farLanaFler();   // true — 3 < MAX_LAN
+medlem.getNamn();   // "Anna"
+medlem.farLana();   // true — 3 < MAX_LAN
 ```
 
-Gränsen ligger i konstanten `MAX_LAN` (5), så regeln står på ett enda ställe i koden. Metoden returnerar bara `true`/`false` och skriver inte ut något själv — all in- och utmatning hör hemma i `CliApp`. Därmed går regeln att återanvända och testa oberoende av terminalgränssnittet.
+`id` och `namn` är `final`: de sätts i konstruktorn och ändras aldrig. `antalLan` är däremot föränderlig, eftersom antalet aktiva lån växer och krymper när böcker lånas och lämnas tillbaka. Gränsen ligger i konstanten `MAX_LAN` (5), så regeln står på ett enda ställe i koden.
 
-#### Record eller vanlig klass?
-
-En record *är* en klass: efter kompilering är `Member` en `public final class Member extends java.lang.Record`, med privata fält, konstruktor, accessorer och den egna metoden. Skillnaden märks först när `antalLan` ska ändras. I en record byggs då ett nytt objekt:
+`farLana()` returnerar bara `true`/`false` och skriver inte ut något själv — all in- och utmatning hör hemma i `CliApp`. Därmed går regeln att återanvända oberoende av terminalgränssnittet:
 
 ```java
-medlemmar[i] = new Member(m.id(), m.namn(), m.antalLan() + 1);
+if (medlem.farLana()) {
+    // låna ut boken
+}
 ```
 
-En vanlig klass hade i stället kunnat öka räknaren på plats med `m.lanaBok()`. Ett ytterligare påpekande: eftersom `antalLan` ingår i den genererade `equals()` är samma medlem med olika antal lån *inte* lika enligt Java, så medlemmar slås alltid upp på `id` och aldrig med `equals()`. Visar sig lånehanteringen bli tydligare med muterbart tillstånd görs `Member` om till en vanlig klass med `lanaBok()` och `aterlamnaBok()`.
+#### Varför klass och inte record
+
+`Book` och `Member` skiljer sig åt på den punkt som avgör formvalet: en bok *är* sina värden, medan en medlem har ett tillstånd som ändras över tid.
+
+1. **Medlemmen behåller sin identitet när tillståndet ändras.** När Anna lånar en bok är det fortfarande samma Anna. Som record hade varje utlåning krävt ett helt nytt objekt — `medlemmar[i] = new Member(m.getId(), m.getNamn(), m.getAntalLan() + 1)` — i stället för att räknaren ökas på plats.
+2. **Genererad `equals()` hade räknat med lånen.** I en record ingår alla komponenter i `equals()`, så Anna med 0 lån hade inte varit lika med Anna med 1 lån. Som vanlig klass jämförs objekt på referens, och medlemmar slås upp på `getId()`.
+3. **Regeln hör ihop med det föränderliga fältet.** `MAX_LAN` och `antalLan` bor i samma klass, så villkoret för utlåning står bredvid det tillstånd det begränsar.
+
+Jämför med `Book`, där inget av detta gäller: en bok byter aldrig titel eller isbn, och två böcker med samma värden *ska* räknas som lika. Därav record i det ena fallet och klass i det andra.
