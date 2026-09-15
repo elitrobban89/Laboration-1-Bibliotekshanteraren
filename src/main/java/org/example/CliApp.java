@@ -1,5 +1,7 @@
 package org.example;
 
+import java.time.LocalDate;
+
 public class CliApp {
     static void main() {
         Library lib = new Library(); //Skapa ett biblioteksobjekt så vi kan anropa Library
@@ -50,7 +52,26 @@ public class CliApp {
                 }
 
                 case "3": {
-                    IO.println("Du vill låna en bok");
+                    String isbn = IO.readln("Ange ISBN på boken: ");
+                    String medlemsId = IO.readln("Ange medlems-id: ");
+                    if(isbn == null || medlemsId == null) {
+                        IO.println("Felaktig input, programmet avslutas");
+                        break;
+                    }
+                    if (lib.lanaBok(isbn,medlemsId)) {
+                        IO.println("Boken lånas ut tom datumet: " + LocalDate.now().plusWeeks(3)); //Vi lånar ut boken till medlemmen i 3 veckor från dagens datum
+                    } else if (lib.hittaBok(isbn) == null) {
+                        IO.println("Det finns ingen bok med det ISBN:et.");
+
+                    } else if (lib.hittaLan(isbn) != null) {
+                        IO.println("Boken är redan utlånad.");
+
+                    } else if (lib.hittaMedlem(medlemsId) == null) {
+                        IO.println("Det finns ingen medlem med det id:t.");
+
+                    } else {
+                        IO.println("Medlemmen har redan max antal lån.");
+                    }
                     break;
                 }
                 case "4":

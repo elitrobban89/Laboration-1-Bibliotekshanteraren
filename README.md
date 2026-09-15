@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna, och menyval 1 och 2 är inkopplade: böcker och medlemmar kan läggas till och ligger kvar under körningen. Utlåningslogiken finns färdig i `Library.lanaBok()` men är ännu inte kopplad till menyval 3.
+Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna, och menyval 1, 2 och 3 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut, och allt ligger kvar under körningen. Vid utlåning visas ett återlämningsdatum tre veckor fram. Kvar står återlämning, sökning och statuslistan.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -14,7 +14,7 @@ Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håll
 - [x] `Library` med datalagring i arrayer med fast storlek
 - [x] Lägg till bok (menyval 1)
 - [x] Registrera medlem (menyval 2)
-- [ ] Låna bok — logiken klar i `Library`, menyval 3 inte inkopplat
+- [x] Låna bok (menyval 3), med specifika felmeddelanden
 - [ ] Lämna tillbaka bok
 - [ ] Sök bok (titel eller författare)
 - [ ] Visa alla böcker och status
@@ -219,6 +219,30 @@ Att lägga kontrollerna som *guard clauses* i stället för nästlade `if`-satse
 
 Verifierat genom testkörning: en bok kan lånas ut en gång, ett andra försök på samma bok nekas, okänt isbn och okänt medlems-id nekas, och det sjätte lånet för samma medlem stoppas av `farLana()`.
 
+### Felmeddelanden vid utlåning
+
+`lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl. För att ändå kunna ge användaren ett begripligt besked ställer `CliApp` diagnosfrågor — men först **efter** ett misslyckat försök, aldrig före:
+
+```java
+if (lib.lanaBok(isbn, medlemsId)) {
+    // lyckades
+} else if (lib.hittaBok(isbn) == null) {
+    IO.println("Det finns ingen bok med det ISBN:et.");
+} else if (lib.hittaLan(isbn) != null) {
+    IO.println("Boken är redan utlånad.");
+} else if (lib.hittaMedlem(medlemsId) == null) {
+    IO.println("Det finns ingen medlem med det id:t.");
+} else {
+    IO.println("Medlemmen har redan max antal lån.");
+}
+```
+
+Ordningen på grenarna följer kontrollordningen i `lanaBok()`, så att rätt orsak rapporteras när flera saker är fel samtidigt. Att fråga efteråt i stället för före innebär också att den lyckade vägen inte belastas med tre extra genomsökningar av arrayerna.
+
+Priset är att `hittaBok()`, `hittaMedlem()` och `hittaLan()` fick ändras från `private` till `public`. De var tänkta som interna hjälpmetoder, och som publika blir de en del av `Library`s gränssnitt som andra klasser kan bli beroende av. Avvägningen gjordes medvetet: begripliga felmeddelanden bedömdes väga tyngre än en helt sluten klass, och `lanaBok()` behåller fortfarande sista ordet om huruvida ett lån får ske.
+
+Alla fem utfallen är verifierade genom körning: lyckad utlåning, redan utlånad bok, okänt isbn, okänt medlems-id och nått lånetak.
+
 ## Beskrivning av lösningen
 
 Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
@@ -235,7 +259,9 @@ Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut n
 
 **Fasta arrayer.** Uppgiften kräver arrayer med fast storlek, vilket innebär att varje array måste kompletteras med en egen räknare och att varje loop måste gå till räknaren i stället för till `length`. Det är mer bokföring än en `ArrayList` hade krävt, men det tvingar fram en tydlig bild av skillnaden mellan arrayens storlek och dess innehåll.
 
-**Kända begränsningar.** `lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl, så gränssnittet kan bara ge ett allmänt felmeddelande. `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre.
+**Inkapsling kontra användbarhet.** `lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl. För att ändå ge begripliga felmeddelanden ställer `CliApp` diagnosfrågor efteråt, vilket krävde att tre hjälpmetoder öppnades från `private` till `public`. Det är en medveten avvägning: en helt sluten klass hade gett användaren ett intetsägande "det gick inte". Alternativet vore att låta `lanaBok()` returnera en felorsak i stället för ett `boolean`, vilket hade bevarat inkapslingen men gjort returtypen mer komplicerad.
+
+**Kända begränsningar.** `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre. Återlämningsdatumet räknas fram i `CliApp` vid utskriften och lagras inte i `Loan`, så systemet kan visa ett datum men inte avgöra om ett lån är försenat.
 
 ## Källkritik
 Jag har skrivit och comittat all Java-kod själv och rättat varje fel för hand; Anthropic Claude Code har förklarat, kompilerat och testkört. 
@@ -243,7 +269,6 @@ Claude Code som guidning och förklaring när jag fastnat på vägen.
 
 ## Att göra härnäst
 
-- Koppla menyval 3 till `Library.lanaBok()`
 - `aterlamna(isbn)` — hitta lånet, minska medlemmens räknare, ta bort posten ur `loans`
 - `sokBok(text)` för menyval 5
 - Metod som listar böcker med status för menyval 6, byggd på `hittaLan()`

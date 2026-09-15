@@ -24,7 +24,7 @@ public class Library {
         Book bok = hittaBok(isbn);
         if (bok == null) return false;
 
-        if (hittaLan(isbn) != null) return false;
+        if (hittaLan(isbn) != null) return false; //Kollar om boken redan är utlånad eller inte
 
         Member medlem = hittaMedlem(medlemsId);
         if (medlem == null) return false;
@@ -39,7 +39,7 @@ public class Library {
     /**
      * Hittar boken via isbn nummer
      */
-    private Book hittaBok(String isbn) {
+    public Book hittaBok(String isbn) {
         for (int i = 0; i < antalBocker; i++) {
             if (boklista[i].isbn().equals(isbn)) {
                 return boklista[i];
@@ -51,7 +51,7 @@ public class Library {
     /**
      * Metod som hittar medlemmen via medlemsid
      */
-    private Member hittaMedlem(String medlemsId) {
+    public Member hittaMedlem(String medlemsId) {
         for (int i = 0; i < antalMedlemmar; i++) {
             if (medlemmar[i].getId().equals(medlemsId)) {
                 return medlemmar[i];
@@ -63,7 +63,7 @@ public class Library {
     /**
      * Metod som hittar lån via bokens isbn om boken är utlånad eller ej
      */
-    private Loan hittaLan(String isbn) {
+    public Loan hittaLan(String isbn) {
         for (int i = 0; i < antalAktivaLan; i++) {
             if (loans[i].book().isbn().equals(isbn)) {
                 return loans[i];
