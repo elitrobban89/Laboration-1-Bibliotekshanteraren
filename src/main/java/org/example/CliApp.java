@@ -134,9 +134,30 @@ public class CliApp {
                     }
                     break;
                 }
-                case "5":
-                    IO.println("Sök bok (titel eller författare):");
+                case "5": {
+                    String sokord = IO.readln("Sök bok (ange titel eller författare): ");
+                    if (sokord == null) {
+                        IO.println("Avbruten inmatning av titel eller författare");
+                        break;
+                    }
+                    sokord = sokord.trim();
+                    if (sokord.isBlank()) {
+                        IO.println("Tom inmatning av titel eller författare. Fältet måste fyllas i.");
+                        break;
+                    }
+
+                    /**Logik för att söka efter bok baserat på titel eller författare anropa sökBok() med sökord*/
+                    Book[] traffar = lib.sokBok(sokord);
+                    if (traffar.length == 0) {
+                        IO.println("Inga böcker hittades med sökordet: " + sokord);
+                        break;
+                    }
+                    /**Skriver ut sökresultat*/
+                    for (Book bok : traffar) {
+                        IO.println(bok.titel() + " - " + bok.forfattare() + " - " + bok.isbn());
+                    }
                     break;
+                }
                 case "6": {
                     Book[] bocker = lib.getAllaBocker(); //Kör metoden inuti Library. Skapar kopia av boklistan
 
@@ -154,30 +175,31 @@ public class CliApp {
                             status = "Utlånad till " + lan.member().getNamn();
                         }
                         IO.println(bok.titel() + " - " + bok.forfattare() + " - " + bok.isbn() + " - " + status);
-                    } break;
+                    }
+                    break;
                 }
-            case "e":
-                IO.println("Avslutar programmet");
-                running = false; //Avsluta programmet
-                break;
-            default:
-                IO.println("Ogiltigt val: '" + val + "'. Välj 1-6 eller e.");
-        }
-    } while(running);
-}
+                case "e":
+                    IO.println("Avslutar programmet");
+                    running = false; //Avsluta programmet
+                    break;
+                default:
+                    IO.println("Ogiltigt val: '" + val + "'. Välj 1-6 eller e.");
+            }
+        } while (running);
+    }
 
-public static void printMenu() {
-    String menyText = """
-                   Bibliotekshanteraren
-                   ====================
-                   1. Lägg till bok
-                   2. Registrera medlem
-                   3. Låna bok
-                   4. Lämna tillbaka bok
-                   5. Sök bok (titel eller författare)
-                   6. Visa alla böcker och status
-                   e. Avsluta
-            """;
-    IO.println(menyText);
-}
+    public static void printMenu() {
+        String menyText = """
+                       Bibliotekshanteraren
+                       ====================
+                       1. Lägg till bok
+                       2. Registrera medlem
+                       3. Låna bok
+                       4. Lämna tillbaka bok
+                       5. Sök bok (titel eller författare)
+                       6. Visa alla böcker och status
+                       e. Avsluta
+                """;
+        IO.println(menyText);
+    }
 }

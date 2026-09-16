@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna. Menyval 1, 2, 3, 4 och 6 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut och lämnas tillbaka, och hela beståndet kan listas med aktuell utlåningsstatus. Vid utlåning visas ett återlämningsdatum tre veckor fram. Söklogiken för menyval 5 finns nu i `Library` som `sokBok()` och kompilerar, men den är ännu inte anropad från menyn — `case "5"` i `CliApp` är fortfarande en platshållare. Det är allt som återstår för godkänt.
+Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sex menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -17,13 +17,12 @@ Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håll
 - [x] Registrera medlem (menyval 2)
 - [x] Låna bok (menyval 3), med specifika felmeddelanden
 - [x] Lämna tillbaka bok (menyval 4)
-- [x] `sokBok()` i `Library` — delsträngsmatchning på titel och författare
-- [ ] Sök bok på del av titel eller författare (menyval 5) — metoden klar, inkopplingen i menyn återstår
+- [x] Sök bok på del av titel eller författare (menyval 5), skiftlägesokänsligt via egen sökloop
 - [x] Visa alla böcker med status (menyval 6)
 
 ## Krav
 
-- JDK 26 (projektet kompileras mot source/target 26 och använder `java.lang.IO` samt `main` utan parametrar)
+- JDK 27 (`pom.xml` sätter `maven.compiler.release` till 27; projektet använder `java.lang.IO` samt `main` utan parametrar)
 - Maven
 
 ## Bygga och köra
@@ -115,6 +114,7 @@ Eftersom `false` då betyder två olika saker — dubblett eller fullt register 
 | Blanksteg runt värden | `trim()` putsar innan värdet lagras eller söks upp |
 | Befintligt isbn eller medlems-id | Avvisas av dubblettvakten i `Library` |
 | Okänd bok, okänd medlem, utlånad bok, nått lånetak | Egna felmeddelanden via `else if`-kedjan |
+| Tomt sökord i menyval 5 | Avvisas av `isBlank()`; annars hade `contains("")` matchat varje bok |
 
 ## Projektstruktur
 
@@ -124,7 +124,7 @@ src/main/java/org/example/
 ├── Book.java     # record: titel, författare, isbn
 ├── Member.java   # klass: id, namn, antal aktiva lån
 ├── Loan.java     # record: kopplar en medlem till en lånad bok
-└── Library.java  # lagring i arrayer samt reglerna för utlåning
+└── Library.java  # lagring i arrayer samt reglerna för utlåning och sökning
 ```
 
 ## Datamodell
@@ -138,7 +138,7 @@ Book bok = new Book("Sagan om ringen", "Tolkien", "91-1-234567-8");
 bok.titel();   // "Sagan om ringen"
 ```
 
-Utlåningsstatus lagras inte i boken, utan kommer att hanteras separat så att det går att se *vem* som lånat ett exemplar.
+Utlåningsstatus lagras inte i boken, utan hålls separat i `loans`-arrayen, så att det går att se *vem* som lånat ett exemplar.
 
 #### Varför en record passar här
 
@@ -245,7 +245,7 @@ Metoder som lägger till returnerar `boolean`: `false` när arrayen är full, s�
 
 ### Uppslagning
 
-Tre privata metoder med samma form — loopa till räknaren, jämför med `equals()`, returnera träffen eller `null`:
+Tre uppslagningsmetoder med samma form — loopa till räknaren, jämför med `equals()`, returnera träffen eller `null`:
 
 | Metod | Söker i | Jämför |
 | --- | --- | --- |
@@ -254,6 +254,8 @@ Tre privata metoder med samma form — loopa till räknaren, jämför med `equal
 | `hittaLan(isbn)` | `loans` | `loans[i].book().isbn()` |
 
 `null` betyder "finns inte" och är ett förväntat svar, inte ett fel.
+
+Metoderna är `public` och inte `private`, av skäl som beskrivs under "Felmeddelanden vid utlåning". Sökningen i menyval 5 följer *inte* den här formen — `sokBok()` jämför med `contains()` i stället för `equals()` och returnerar flera träffar i stället för den första, vilket beskrivs under "Sökning".
 
 ### Utlåning
 
@@ -421,8 +423,31 @@ public Book[] sokBok(String sokord) {
 
 Att returnera `traffar` direkt hade varit fel: med tio böcker i biblioteket och två träffar blir arrayen tio lång, med åtta `null`-platser på slutet. En `for`-each i `CliApp` hade kraschat med `NullPointerException` på den första, och `.length` hade sagt tio i stället för två. Nedkopieringen är samma mönster som i `getAllaBocker()` — anroparen får en array vars längd *är* antalet böcker i den.
 
-Noll träffar ger därför en tom array, inte `null`. `CliApp` kan då kolla `bocker.length == 0` för "inga träffar", precis som menyval 6 gör för ett tomt bibliotek, och slipper ännu en `null`-kontroll.
+Noll träffar ger därför en tom array, inte `null`. `CliApp` kan då kolla `traffar.length == 0` för "inga träffar", precis som menyval 6 gör för ett tomt bibliotek, och slipper ännu en `null`-kontroll.
 
+#### Menyvalet
+
+`case "5"` kör samma valideringskedja som övriga inmatningsblock — `null` → `trim()` → `isBlank()` — och anropar sedan metoden:
+
+```java
+Book[] traffar = lib.sokBok(sokord);
+if (traffar.length == 0) {
+    IO.println("Inga böcker hittades med sökordet: " + sokord);
+    break;
+}
+for (Book bok : traffar) {
+    IO.println(bok.titel() + " - " + bok.forfattare() + " - " + bok.isbn());
+}
+break;
+```
+
+`isBlank()`-kontrollen bär extra tyngd just här. Ett tomt sökord hade gjort varje `contains("")` sant, och sökningen hade svarat med hela biblioteket i stället för ett felmeddelande.
+
+`for`-each går att använda utan risk, eftersom `sokBok()` redan kopierat ner arrayen till exakt antalet träffar — samma skäl som gör `getAllaBocker()` säker att loopa över i menyval 6.
+
+Grenens avslutande `break` är nödvändig och inte bara god sed: utan den faller `case "5"` igenom till `case "6"` i `switch`-satsen, och användaren hade fått sina träffar följda av hela boklistan.
+
+Verifierat genom körning mot ett bibliotek med tre böcker: `pippi` i gemener hittar *Pippi Långstrump*, `ASTRID` i versaler hittar båda Lindgren-böckerna, `lejon` matchar mitt inne i ett ord, `zzz` ger beskedet om noll träffar, ett sökord med bara blanksteg avvisas av `isBlank()`, och `   ring   ` trimmas innan sökningen och hittar *Sagan om ringen*.
 ## Beskrivning av lösningen
 
 Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
@@ -441,12 +466,35 @@ Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut n
 
 **Inkapsling kontra användbarhet.** `lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl. För att ändå ge begripliga felmeddelanden ställer `CliApp` diagnosfrågor efteråt, vilket krävde att tre hjälpmetoder öppnades från `private` till `public`. Det är en medveten avvägning: en helt sluten klass hade gett användaren ett intetsägande "det gick inte". Alternativet vore att låta `lanaBok()` returnera en felorsak i stället för ett `boolean`, vilket hade bevarat inkapslingen men gjort returtypen mer komplicerad.
 
+**Sökning med okänt antal träffar.** Sökningen skilde sig från de övriga uppslagningarna på en punkt som fick styra utformningen: antalet svar är inte känt i förväg. Utan `ArrayList` gick det inte att låta resultatet växa, så `sokBok()` fyller en temp-array i värsta-fallsstorlek och kopierar ner till exakt antalet träffar innan den returnerar. Alternativet — att loopa två gånger, först för att räkna och sedan för att fylla — hade sparat kopieringen men upprepat matchningsvillkoret på två ställen. Valet föll på en enda plats för villkoret. Att metoden tar ett sökord i stället för en titel och en författare var också medvetet: två parametrar hade tvingat användaren att lämna ett fält tomt, och `contains("")` är sant för varje sträng.
+
 **Kända begränsningar.** `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre. Återlämningsdatumet räknas fram i `CliApp` vid utskriften och lagras inte i `Loan`, så systemet kan visa ett datum men inte avgöra om ett lån är försenat.
 
 ## Källkritik
 Jag har skrivit och committat all Java-kod själv och rättat varje fel för hand. Anthropic Claude Code har förklarat, kompilerat och testkört koden, och jag har använt det som guidning och förklaring när jag fastnat på vägen.
 
-## Att göra härnäst
+## Kravuppfyllnad (G)
 
-- Koppla in `sokBok()` i `case "5"` i `CliApp`: läs sökordet, kör kedjan `null` → `trim()` → `isBlank()`, anropa metoden och skriv ut träffarna. Tomt sökord måste avvisas, eftersom `contains("")` annars matchar varje bok.
-- Testköra sökningen: träff på del av titel, träff på del av författarnamn, blandade versaler, flera träffar samtidigt och noll träffar.
+| Krav i uppgiften | Var det finns |
+| --- | --- |
+| Minst en record | `Book` och `Loan` |
+| Vanlig klass med privata fält, konstruktor och get/set | `Member` — `getId()`, `getNamn()`, `getAntalLan()`, `setAntalLan()` |
+| Minst en egen metod på medlemmen | `Member.farLana()` — avgör om fler lån tillåts |
+| Arrayer med fast storlek, ingen `ArrayList` | `boklista`, `medlemmar`, `loans` i `Library` |
+| Hantera full array | `laggTillBok()` och `registreraMedlem()` returnerar `false`; menyn skriver "Biblioteket är fullt." |
+| Struktur som visar vilka böcker som är utlånade och till vem | `loans`-arrayen med `Loan(member, book)` |
+| Robust meny som tål felaktig inmatning | Inget värde parsas som tal; `default` fångar ogiltiga val; `null` från tom ström hanteras |
+| Lägga till bok | Menyval 1 |
+| Registrera medlem | Menyval 2 |
+| Låna bok, med kontroll att den finns och inte är utlånad | Menyval 3 via `lanaBok()` — fyra kontroller |
+| Lämna tillbaka bok | Menyval 4 via `aterlamnaBok()` |
+| Söka på del av titel eller författare, skiftlägesokänsligt, egen linjär sökloop | Menyval 5 via `sokBok()` |
+| Visa alla böcker med status och till vem | Menyval 6 via `getAllaBocker()` och `hittaLan()` |
+| Tydliga felmeddelanden, ingen krasch | `else if`-kedjor efter varje misslyckat anrop |
+| Maven-konfiguration | `pom.xml` |
+| Flera meningsfulla commits | Repots historik, en commit per färdigställt moment |
+| Beskrivning och reflektion i README | Avsnitten "Beskrivning av lösningen" och "Reflektion kring designval" |
+
+Uppgiften nämner `Scanner` som exempel på hur menyn läser inmatning. Projektet använder `IO.readln()` i stället, av robusthetsskäl som redovisas under "Inläsning med `java.lang.IO` i stället för `Scanner`". Funktionellt är de likvärdiga här — båda läser en rad text i taget från standard in, och inget värde tolkas som tal.
+
+VG-kraven — egen sorteringsalgoritm, statistik över flest aktiva lån och dynamisk kapacitet — ingår inte i den här inlämningen.
