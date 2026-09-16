@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna. Menyval 1, 2, 3, 4 och 6 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut och lämnas tillbaka, och hela beståndet kan listas med aktuell utlåningsstatus. Vid utlåning visas ett återlämningsdatum tre veckor fram. Kvar för godkänt står endast sökningen, menyval 5.
+Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håller arrayerna och äger reglerna. Menyval 1, 2, 3, 4 och 6 är inkopplade: böcker och medlemmar kan läggas till, böcker kan lånas ut och lämnas tillbaka, och hela beståndet kan listas med aktuell utlåningsstatus. Vid utlåning visas ett återlämningsdatum tre veckor fram. Söklogiken för menyval 5 finns nu i `Library` som `sokBok()` och kompilerar, men den är ännu inte anropad från menyn — `case "5"` i `CliApp` är fortfarande en platshållare. Det är allt som återstår för godkänt.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -17,7 +17,8 @@ Datamodellen är komplett — `Book`, `Member` och `Loan` finns. `Library` håll
 - [x] Registrera medlem (menyval 2)
 - [x] Låna bok (menyval 3), med specifika felmeddelanden
 - [x] Lämna tillbaka bok (menyval 4)
-- [ ] Sök bok på del av titel eller författare (menyval 5)
+- [x] `sokBok()` i `Library` — delsträngsmatchning på titel och författare
+- [ ] Sök bok på del av titel eller författare (menyval 5) — metoden klar, inkopplingen i menyn återstår
 - [x] Visa alla böcker med status (menyval 6)
 
 ## Krav
@@ -366,6 +367,62 @@ Eftersom `hittaLan()` svarar på både om boken är utlånad och till vem, täck
 
 Ett tomt bibliotek fångas före loopen och ger beskedet "Inga böcker i biblioteket." i stället för tystnad.
 
+### Sökning
+
+Menyval 5 ska hitta böcker på **del av** titeln eller författaren, skiftlägesokänsligt. Det låter som en uppgift för `hittaBok()`, men den metoden duger inte, och skillnaderna är just det som formar `sokBok()`:
+
+| | `hittaBok()` | `sokBok()` |
+| --- | --- | --- |
+| Söker i | `isbn()` | `titel()` **eller** `forfattare()` |
+| Jämför med | `equals()` — hela strängen exakt | `contains()` på gemener — del av strängen |
+| Antal svar | första träffen, sedan `return` | alla träffar, loopen går klart |
+| Returnerar | `Book` eller `null` | `Book[]`, tom array vid noll träffar |
+
+Den tredje raden är den avgörande. `hittaBok()` får avbryta vid första träffen eftersom isbn är unikt — dubblettvakten i `laggTillBok()` garanterar det. Ett sökord som `astrid` kan däremot matcha flera böcker, så sökloopen måste gå hela vägen till `antalBocker`.
+
+#### Ett sökord, två fält
+
+`sokBok()` tar **en** parameter, inte en för titel och en för författare:
+
+```java
+if (boklista[i].titel().toLowerCase().contains(sokord.toLowerCase())
+        || boklista[i].forfattare().toLowerCase().contains(sokord.toLowerCase())) {
+```
+
+Kravets "titel eller författare" handlar om vilka fält som genomsöks, inte om hur många frågor användaren ska svara på. `||` gör att det räcker att ett av fälten matchar, så `pippi` ger träff via titeln och `astrid` via författaren — utan att användaren behöver tala om vilketdera hen skrev.
+
+Två parametrar hade dessutom öppnat en fälla: den som bara vill söka på författare lämnar titelfältet tomt, och `"".contains("")` är sant för varje sträng. Alla böcker i biblioteket hade blivit träffar. Med ett enda sökord räcker den vanliga `isBlank()`-kontrollen i `CliApp` för att stänga den vägen.
+
+`toLowerCase()` måste stå på **båda** sidor av `contains()`. Med gemener bara på bokens fält matchar `"astrid lindgren".contains("Astrid")` inte — och versal begynnelsebokstav är precis vad man skriver när man söker på ett namn.
+
+#### Okänt antal träffar i en array med fast storlek
+
+Utan `ArrayList` går det inte att skapa returarrayen förrän antalet träffar är känt. `sokBok()` löser det med en temp-array i värsta-fallsstorlek och en egen räknare, och kopierar sedan ner till exakt rätt längd:
+
+```java
+public Book[] sokBok(String sokord) {
+    Book[] traffar = new Book[antalBocker];   // värsta fallet: alla böcker matchar
+    int antalTraffar = 0;
+
+    for (int i = 0; i < antalBocker; i++) {
+        if ( /* matchar titel eller författare */ ) {
+            traffar[antalTraffar] = boklista[i];
+            antalTraffar++;
+        }
+    }
+
+    Book[] kopia = new Book[antalTraffar];    // exakt rätt storlek
+    for (int i = 0; i < antalTraffar; i++) {
+        kopia[i] = traffar[i];
+    }
+    return kopia;
+}
+```
+
+Att returnera `traffar` direkt hade varit fel: med tio böcker i biblioteket och två träffar blir arrayen tio lång, med åtta `null`-platser på slutet. En `for`-each i `CliApp` hade kraschat med `NullPointerException` på den första, och `.length` hade sagt tio i stället för två. Nedkopieringen är samma mönster som i `getAllaBocker()` — anroparen får en array vars längd *är* antalet böcker i den.
+
+Noll träffar ger därför en tom array, inte `null`. `CliApp` kan då kolla `bocker.length == 0` för "inga träffar", precis som menyval 6 gör för ett tomt bibliotek, och slipper ännu en `null`-kontroll.
+
 ## Beskrivning av lösningen
 
 Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
@@ -391,4 +448,5 @@ Jag har skrivit och committat all Java-kod själv och rättat varje fel för han
 
 ## Att göra härnäst
 
-- `sokBok(text)` för menyval 5 — delsträngsmatchning på titel och författare
+- Koppla in `sokBok()` i `case "5"` i `CliApp`: läs sökordet, kör kedjan `null` → `trim()` → `isBlank()`, anropa metoden och skriv ut träffarna. Tomt sökord måste avvisas, eftersom `contains("")` annars matchar varje bok.
+- Testköra sökningen: träff på del av titel, träff på del av författarnamn, blandade versaler, flera träffar samtidigt och noll träffar.

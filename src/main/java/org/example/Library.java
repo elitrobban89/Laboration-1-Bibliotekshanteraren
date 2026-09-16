@@ -49,6 +49,27 @@ public class Library {
     }
 
     /**
+     * För Menyval 5 kan vi inte använda hittaBok utan får skapa en ny egen metod som hittar boken via titel eller författare
+     * dock så använder vi här sökord istället för både titel och författare
+     */
+    public Book[] sokBok(String sokord) {
+        Book[] traffar = new Book[antalBocker];
+        int antalTraffar = 0;
+        for (int i = 0; i < antalBocker; i++) {
+            if (boklista[i].titel().toLowerCase().contains(sokord.toLowerCase()) || boklista[i].forfattare().toLowerCase().contains(sokord.toLowerCase())) {
+                traffar[antalTraffar] = boklista[i];
+                antalTraffar++;
+            }
+        }
+        Book[] kopia = new Book[antalTraffar];
+        for (int i = 0; i < antalTraffar; i++) {
+            kopia[i] = traffar[i];
+        }
+        return kopia;
+    }
+
+
+    /**
      * Metod som hittar medlemmen via medlemsid
      */
     public Member hittaMedlem(String medlemsId) {
