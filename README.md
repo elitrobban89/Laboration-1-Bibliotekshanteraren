@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sju menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort, och menyval 7 visar vilken medlem som har flest aktiva lån — två av VG-kraven.
+Programmet är funktionellt komplett för både godkänt och väl godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sju menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort, menyval 7 visar vilken medlem som har flest aktiva lån, och alla tre arrayerna växer automatiskt när de blir fulla. Samtliga VG-krav är uppfyllda.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -12,7 +12,7 @@ Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` 
 - [x] `Book` som record
 - [x] `Member` som klass med regeln `farLana()`
 - [x] `Loan` som kopplar ihop bok och medlem
-- [x] `Library` med datalagring i arrayer med fast storlek
+- [x] `Library` med datalagring i arrayer, ingen `ArrayList`
 - [x] Lägg till bok (menyval 1)
 - [x] Registrera medlem (menyval 2)
 - [x] Låna bok (menyval 3), med specifika felmeddelanden
@@ -24,8 +24,8 @@ För väl godkänt:
 
 - [x] Egen sorteringsalgoritm (bubble sort) på titel för menyval 6
 - [x] Statistik: medlem med flest aktiva lån (menyval 7)
-- [ ] Dynamisk kapacitet: arrayer som växer när de blir fulla
-- [ ] Reflektion i README om Collections Framework
+- [x] Dynamisk kapacitet: arrayer som växer när de blir fulla
+- [x] Reflektion i README om Collections Framework
 
 ## Krav
 
@@ -110,7 +110,7 @@ if (hittaMedlem(medlem.getId()) != null) return false;
 
 Utan dem hade en andra bok med samma isbn hamnat i arrayen men aldrig gått att nå, eftersom `hittaBok()` alltid returnerar första träffen. Regeln ligger i `Library` och inte i `CliApp`, så den gäller oavsett vem som anropar metoden.
 
-Eftersom `false` då betyder två olika saker — dubblett eller fullt register — ställer `CliApp` en följdfråga och väljer meddelande därefter, på samma sätt som vid utlåning.
+Sedan arrayerna växer dynamiskt är dubbletten det enda skälet kvar till att dessa två metoder returnerar `false`, så `CliApp` kan skriva dubblettmeddelandet direkt i en `else`-gren utan att först ställa en följdfråga. Vid utlåning, där `lanaBok()` kan misslyckas av fyra skäl, behövs följdfrågorna fortfarande.
 
 #### Sammanställning
 
@@ -217,32 +217,32 @@ Ett lån är oföränderligt: det är antingen aktivt eller så finns det inte. 
 
 `Library` äger all data och alla regler. Den skriver aldrig ut något — den svarar, och `CliApp` formulerar svaret för användaren. Samma uppdelning som i `Member.farLana()`, som returnerar `true`/`false` utan att säga något till användaren.
 
-### Tre arrayer med fast storlek
+### Tre arrayer med räknare
 
-`Library` håller tre arrayer, alla med fast storlek:
+`Library` håller tre arrayer. De skapas små och växer vid behov — se "Dynamisk kapacitet" längre ner:
 
 ```java
-private Book[] boklista = new Book[MAX_BOCKER];        // alla böcker
-private Member[] medlemmar = new Member[MAX_MEDLEMMAR]; // alla medlemmar
-private Loan[] loans = new Loan[MAX_BOCKER];            // aktiva lån
+private Book[] boklista = new Book[START_BOCKER];         // alla böcker
+private Member[] medlemmar = new Member[START_MEDLEMMAR];  // alla medlemmar
+private Loan[] loans = new Loan[START_BOCKER];             // aktiva lån
 ```
 
 `loans` är strukturen som håller reda på **vilka böcker som är utlånade och till vem**. Varje `Loan` pekar på både boken och medlemmen, så `hittaLan(isbn)` svarar på om en bok är utlånad, och `lan.member()` på till vem. En bok som inte förekommer i `loans` är tillgänglig — utlåningsstatus lagras alltså aldrig i `Book` själv.
 
-Lånearrayen är lika stor som boklistan, eftersom en bok bara kan vara utlånad till en person åt gången. Fler aktiva lån än böcker kan därför aldrig uppstå.
+Lånearrayen startar lika stor som boklistan, eftersom en bok bara kan vara utlånad till en person åt gången och fler aktiva lån än böcker därför aldrig kan uppstå. Den måste dock växa i takt med boklistan — se "Dynamisk kapacitet".
 
 Varje array har en räknare bredvid sig:
 
 ```java
-private Book[] boklista = new Book[MAX_BOCKER];
+private Book[] boklista = new Book[START_BOCKER];
 private int antalBocker = 0;
 ```
 
-Arrayen är full storlek från start, men alla platser innehåller `null`. Räknaren markerar var det riktiga innehållet slutar:
+Arrayen har sin fulla längd från början, men alla platser innehåller `null`. Räknaren markerar var det riktiga innehållet slutar:
 
 ```
-index:     0      1      2      3      4     ...    99
-         [bok]  [bok]  [bok]  null   null   ...   null
+index:     0      1      2      3
+         [bok]  [bok]  [bok]  null
                                ↑
                         antalBocker = 3
 ```
@@ -361,7 +361,7 @@ public Book[] getAllaBocker() {
 
 Två skäl till att inte returnera `boklista` rakt av:
 
-1. **Den interna arrayen är mestadels tom.** Med tre böcker inlagda följer 97 `null`-platser med, och en `for`-each över den kraschar direkt. Kopian är `antalBocker` lång och innehåller inga `null`, vilket gör att anroparen kan använda `for`-each och `.length` utan att känna till räknarmönstret.
+1. **Den interna arrayen är mestadels tom.** Med tre böcker i en array som rymmer fyra följer en `null`-plats med, och en `for`-each över den kraschar direkt. Kopian är `antalBocker` lång och innehåller inga `null`, vilket gör att anroparen kan använda `for`-each och `.length` utan att känna till räknarmönstret.
 2. **Inkapslingen skulle gå förlorad.** Den som får referensen till `boklista` kan skriva `bocker[0] = null` och ändra bibliotekets innehåll utifrån, förbi alla kontroller. Ändringar i kopian påverkar ingenting.
 
 Kopieringen sker med en egen loop i stället för `java.util.Arrays.copyOf()`, i linje med uppgiftens inriktning på manuell arrayhantering.
@@ -594,9 +594,59 @@ Medlemmen med flest lån är Anna (antal aktiva lån: 1)
 
 Anna behåller förstaplatsen vid lika, i enlighet med `>`-jämförelsen, och siffran gör förändringen synlig. Ett ogiltigt menyval svarar "Ogiltigt val: '8'. Välj 1-7 eller e.".
 
+### Dynamisk kapacitet
+
+VG-kravet säger att programmet ska skapa en ny, större array, kopiera över befintliga element och fortsätta när en array blir full — manuellt, utan `ArrayList`.
+
+**Startstorlekarna sänktes med avsikt.** Konstanterna hette tidigare `MAX_BOCKER = 100` och `MAX_MEDLEMMAR = 50`. Båda namn och värden blev fel i och med det här kravet: `MAX` betyder "högsta tillåtna", men efter växlingen finns inget tak alls. De heter nu `START_BOCKER = 4` och `START_MEDLEMMAR = 2`. Det låga värdet är inte en förenkling utan en förutsättning för att växandet ska gå att visa — med 100 platser hade en rättare behövt mata in 101 böcker för hand innan något överhuvudtaget hänt.
+
+**Växa-metoden.** Samma tre steg för varje typ: skapa dubbelt så stor array, kopiera över med en egen loop, returnera den nya.
+
+```java
+private Book[] dynamiskArray(Book[] gammal) {
+    Book[] ny = new Book[gammal.length * 2];
+    for (int i = 0; i < gammal.length; i++) {
+        ny[i] = gammal[i];
+    }
+    return ny;
+}
+```
+
+Kopieringen sker med en handskriven loop, inte med `Arrays.copyOf()` eller `System.arraycopy()`, i linje med kravets formulering om manuell array-växling.
+
+**Varför metoden måste returnera.** Det hade sett rimligt ut att avsluta med `gammal = ny;` i stället för ett `return`, men det hade inte fungerat. När en array skickas som argument får metoden en *kopia av referensen*. Innehållet går att ändra genom kopian, men om man pekar om själva variabeln till ett nytt objekt ändras bara metodens egen kopia — anroparens fält pekar kvar på den gamla arrayen. Därför returnerar metoden den nya arrayen, och anroparen tilldelar om sitt fält:
+
+```java
+if (antalBocker >= boklista.length) {
+    boklista = dynamiskArray(boklista);
+}
+boklista[antalBocker] = bok;
+antalBocker++;
+return true;
+```
+
+**Villkoret jämför mot `boklista.length`, inte mot `START_BOCKER`.** Konstanten är låst vid 4 och beskriver bara storleken vid start. Ett villkor mot konstanten hade varit sant vid varje tillägg efter den fjärde boken, så arrayen hade fördubblats om och om igen — 4, 8, 16, 32, 64 platser för sju böcker. Bara `.length` säger sanningen om hur stor arrayen är just nu. Det är samma insikt som gör att alla loopar måste gå till räknaren och inte till `length`, fast spegelvänd.
+
+**Fullkontrollen ersatte nekandet.** `laggTillBok()` och `registreraMedlem()` returnerade tidigare `false` när arrayen var full. Den grenen är borta: metoderna växer i stället och lägger alltid till. Kvar finns ett enda `return false` i vardera metod — dubblettkontrollen. Följdeffekten i `CliApp` var att meddelandena "Biblioteket är fullt." och "Medlemsregistret är fullt." blev omöjliga att nå och togs bort, och att `else if`-kedjorna i menyval 1 och 2 kunde kollapsa till ett rent `else`. Menyval 3 rördes inte, eftersom `lanaBok()` fortfarande kan misslyckas av fyra skäl.
+
+G-kravet "hantera fallet att arrayen är full" är alltså fortfarande uppfyllt, men på ett annat sätt: fallet hanteras genom att arrayen växer i stället för att tillägget nekas.
+
+**Lånearrayen måste växa med.** Det här var kravets egentliga fälla. `lanaBok()` skrev `loans[antalAktivaLan]` utan någon kontroll, vilket var ofarligt så länge `boklista` var låst till 100 platser — fler aktiva lån än böcker kan aldrig uppstå, och `loans` var lika stor som boklistan. I samma sekund som boklistan kunde växa förbi `loans` blev det en krasch:
+
+```
+Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 4 out of bounds for length 4
+	at org.example.Library.lanaBok(Library.java:38)
+```
+
+Fem böcker gick att lägga in, men `loans` hade fortfarande fyra platser. Kravet nämner bara bok- och medlemsarrayen, men lånearrayen måste följa med — annars introducerar VG-kravet en regression i G-kravet att programmet aldrig ska krascha. Fullkontrollen ligger sist i `lanaBok()`, efter alla fyra `return false`-kontrollerna, så att arrayen inte växer i onödan när ett lån nekas.
+
+**Tre nästan identiska metoder.** `dynamiskArray()`, `dynamiskMember()` och `dynamiskLan()` skiljer sig åt på ett typnamn på tre ställen vardera. Java-arrayer är inte generiska, så en metod som tar `Book[]` kan inte ta emot `Member[]`. Utan Generics finns ingen väg runt det. Duplikationen diskuteras vidare under "Reflektion: hur Collections Framework hade förändrat lösningen".
+
+**Verifiering.** Tjugo böcker matades in, vilket kräver tre växlingar (4 → 8 → 16 → 32). Samtliga tjugo listas därefter av menyval 6, i bokstavsordning och utan `null`-platser. Tolv medlemmar gav tre växlingar av medlemsarrayen (2 → 4 → 8 → 16), och statistiken hittade rätt person på plats nio i den växta arrayen. Tjugo samtidiga lån gav tre växlingar av lånearrayen, med rätt låntagare på varje bok i statuslistan. Sökning, återlämning och statistik fungerade oförändrat efteråt, och inga undantag uppstod. Även den tidigare gränsen testades: 101 böcker och 51 medlemmar läggs numera in utan att något avvisas.
+
 ## Beskrivning av lösningen
 
-Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
+Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer där en räknare per array håller reda på hur många platser som används, och där arrayen byts ut mot en dubbelt så stor när den blir full.
 
 Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut något. All kommunikation går genom metodanrop med returvärden.
 
@@ -608,13 +658,49 @@ Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut n
 
 **Objektreferenser i `Loan`.** `Loan` håller `Member` och `Book` direkt i stället för id-strängar. Det ger typsäkerhet — kompilatorn hindrar att ett isbn skickas där ett medlems-id ska vara — och slipper uppslagningar vid varje utskrift. Viktigast är att `lan.member()` är samma objekt som ligger i medlemsarrayen, så lånräknaren aldrig kan hamna i otakt mellan de två.
 
-**Fasta arrayer.** Uppgiften kräver arrayer med fast storlek, vilket innebär att varje array måste kompletteras med en egen räknare och att varje loop måste gå till räknaren i stället för till `length`. Det är mer bokföring än en `ArrayList` hade krävt, men det tvingar fram en tydlig bild av skillnaden mellan arrayens storlek och dess innehåll.
+**Arrayer med räknare.** Uppgiften kräver arrayer i stället för `ArrayList`, vilket innebär att varje array måste kompletteras med en egen räknare och att varje loop måste gå till räknaren i stället för till `length`. Det är mer bokföring, men det tvingar fram en tydlig bild av skillnaden mellan arrayens kapacitet och dess innehåll — en skillnad som blev helt avgörande när arrayerna sedan gjordes dynamiska.
 
 **Inkapsling kontra användbarhet.** `lanaBok()` returnerar ett enda `boolean` trots att den kan misslyckas av fyra skäl. För att ändå ge begripliga felmeddelanden ställer `CliApp` diagnosfrågor efteråt, vilket krävde att tre hjälpmetoder öppnades från `private` till `public`. Det är en medveten avvägning: en helt sluten klass hade gett användaren ett intetsägande "det gick inte". Alternativet vore att låta `lanaBok()` returnera en felorsak i stället för ett `boolean`, vilket hade bevarat inkapslingen men gjort returtypen mer komplicerad.
 
 **Sökning med okänt antal träffar.** Sökningen skilde sig från de övriga uppslagningarna på en punkt som fick styra utformningen: antalet svar är inte känt i förväg. Utan `ArrayList` gick det inte att låta resultatet växa, så `sokBok()` fyller en temp-array i värsta-fallsstorlek och kopierar ner till exakt antalet träffar innan den returnerar. Alternativet — att loopa två gånger, först för att räkna och sedan för att fylla — hade sparat kopieringen men upprepat matchningsvillkoret på två ställen. Valet föll på en enda plats för villkoret. Att metoden tar ett sökord i stället för en titel och en författare var också medvetet: två parametrar hade tvingat användaren att lämna ett fält tomt, och `contains("")` är sant för varje sträng.
 
 **Kända begränsningar.** `Member` har en `setAntalLan()` som gör det möjligt att gå förbi gränsen `MAX_LAN` — en metod som `lanaBok()` i `Member` hade skyddat regeln bättre. Återlämningsdatumet räknas fram i `CliApp` vid utskriften och lagras inte i `Loan`, så systemet kan visa ett datum men inte avgöra om ett lån är försenat.
+
+## Reflektion: hur Collections Framework hade förändrat lösningen
+
+Uppgiften förbjuder Collections Framework, Generics och Streams. Nedan är vad de förbuden faktiskt kostade, och vad de lärde mig — det är svårt att uppskatta vad `ArrayList` gör förrän man byggt den för hand.
+
+**Räknaren hade försvunnit.** Varje array i `Library` måste kompletteras med ett heltal som håller reda på hur många platser som används: `antalBocker`, `antalMedlemmar`, `antalAktivaLan`. Skillnaden mellan arrayens *storlek* och dess *innehåll* går igen i varje metod — `hittaBok()` måste loopa till `antalBocker` och inte till `boklista.length`, annars kraschar den på `null`-platserna i slutet. Med en `ArrayList` hade `size()` varit räknaren, och frågan hade aldrig uppstått.
+
+**Dynamisk kapacitet är `ArrayList`s inre mekanik.** VG-kravet om manuell array-växling går ut på att skapa en större array, kopiera över och peka om. Det är i princip exakt vad `ArrayList.add()` gör när den underliggande arrayen tar slut — skillnaden är att `ArrayList` växer med femtio procent i stället för att fördubbla, och att den använder `System.arraycopy()`. Med Collections hade hela det kravet reducerats till att inte tänka på saken. Att ha skrivit `dynamiskArray()` för hand gör det däremot begripligt *varför* en `ArrayList` kan bli dyr när man lägger till många element: varje växling kopierar om allt som redan finns.
+
+**Tre identiska metoder i stället för noll.** Den tydligaste kostnaden. Java-arrayer är inte generiska, så en metod som tar emot `Book[]` kan inte ta emot `Member[]` — kompilatorn vägrar. Resultatet är `dynamiskArray()`, `dynamiskMember()` och `dynamiskLan()`, som är teckenidentiska så när som på ett typnamn på tre ställen vardera:
+
+```java
+private Book[] dynamiskArray(Book[] gammal) {
+    Book[] ny = new Book[gammal.length * 2];
+    for (int i = 0; i < gammal.length; i++) {
+        ny[i] = gammal[i];
+    }
+    return ny;
+}
+```
+
+Med Generics hade en enda `<T> T[] vaxa(T[] gammal)` kunnat ersätta alla tre. Med Collections hade frågan inte ställts alls, eftersom ingen skriver växlingskod: `ArrayList<Book>`, `ArrayList<Member>` och `ArrayList<Loan>` hade skött det själva. Duplikationen är alltså inte ett designfel utan en direkt följd av begränsningen — men det är den enda platsen i projektet där jag inte kan försvara koden på egna meriter.
+
+**Uppslagningarna hade blivit konstanttidsoperationer.** `hittaBok()`, `hittaMedlem()` och `hittaLan()` är alla linjära sökningar som i värsta fall går igenom hela arrayen. Med `HashMap<String, Book>` nycklad på isbn hade `hittaBok()` blivit ett `get()` i konstant tid. Effekten hade varit störst i `laggTillBok()`, som anropar `hittaBok()` för dubblettkontroll vid varje tillägg — att fylla biblioteket är därför en kvadratisk operation i dagens lösning.
+
+**Lånehanteringen hade förenklats mest av alla.** `loans` är en array där återlämning löses genom att flytta sista elementet till den lucka som uppstår och nolla sista platsen, just för att undvika hål i mitten. Med en `Map<String, Loan>` nycklad på isbn hade `hittaLan()` blivit `get(isbn)` och hela `aterlamnaBok()` i praktiken blivit `remove(isbn)`. Flyttmanövern hade varit onödig.
+
+**Sorteringen hade varit en rad.** `sorteraPaTitel()` är tjugo rader bubble sort i O(n²). Motsvarigheten är `list.sort(Comparator.comparing(Book::titel, String.CASE_INSENSITIVE_ORDER))`, som dessutom kör i O(n log n). Att ha skrivit bubble sort själv gör skillnaden konkret i stället för abstrakt.
+
+**Sökningen hade sluppit sin omväg.** `sokBok()` vet inte i förväg hur många träffar som kommer, så den fyller en array i värsta-fallsstorlek och kopierar sedan ner till exakt rätt längd innan den returnerar. En `List` som växer vid behov hade gjort både temp-arrayen och nedkopieringen överflödiga.
+
+**Statistiken hade varit ett anrop.** Max-loopen i `flestLan()` motsvaras av `Collections.max(medlemmar, Comparator.comparingInt(Member::getAntalLan))`. Med Streams hade den blivit ännu kortare, men då hade jag också tappat kontrollen över hur oavgjort hanteras — min loop använder `>` och låter den första medlemmen behålla platsen, vilket är ett val jag gjorde medvetet.
+
+**Inkapslingen hade fått ett färdigt verktyg.** `getAllaBocker()` returnerar en handkopierad array just för att den som anropar inte ska kunna ändra bibliotekets innehåll utifrån. `List.copyOf()` eller `Collections.unmodifiableList()` uttrycker samma avsikt tydligare, och det senare slipper kopieringen helt.
+
+**Vad begränsningen var värd.** Sammantaget hade lösningen blivit kortare, snabbare och mindre upprepad med Collections — förmodligen en tredjedel så mycket kod i `Library`. Men det jag hade missat är inte trivialt: skillnaden mellan en arrays kapacitet och dess innehåll, varför en växa-metod måste *returnera* den nya arrayen i stället för att tilldela parametern (referensen skickas som värde, så en omtilldelning inuti metoden syns inte hos anroparen), och varför gränsvillkoret i en loop som läser `[j + 1]` måste sluta ett steg tidigare. Det är fel jag gjorde under arbetet och fick felsöka, inte saker jag läste mig till. `ArrayList` hade dolt precis de detaljerna — vilket är poängen med den i skarp kod, och skälet att inte använda den här.
 
 ## Källkritik
 Jag har skrivit och committat all Java-kod själv och rättat varje fel för hand. Anthropic Claude Code har förklarat, kompilerat och testkört koden, och jag har använt det som guidning och förklaring när jag fastnat på vägen.
@@ -626,8 +712,8 @@ Jag har skrivit och committat all Java-kod själv och rättat varje fel för han
 | Minst en record | `Book` och `Loan` |
 | Vanlig klass med privata fält, konstruktor och get/set | `Member` — `getId()`, `getNamn()`, `getAntalLan()`, `setAntalLan()` |
 | Minst en egen metod på medlemmen | `Member.farLana()` — avgör om fler lån tillåts |
-| Arrayer med fast storlek, ingen `ArrayList` | `boklista`, `medlemmar`, `loans` i `Library` |
-| Hantera full array | `laggTillBok()` och `registreraMedlem()` returnerar `false`; menyn skriver "Biblioteket är fullt." |
+| Arrayer, ingen `ArrayList` | `boklista`, `medlemmar`, `loans` i `Library` |
+| Hantera full array | Arrayen byts ut mot en dubbelt så stor och programmet fortsätter — se "Dynamisk kapacitet" (VG) |
 | Struktur som visar vilka böcker som är utlånade och till vem | `loans`-arrayen med `Loan(member, book)` |
 | Robust meny som tål felaktig inmatning | Inget värde parsas som tal; `default` fångar ogiltiga val; `null` från tom ström hanteras |
 | Lägga till bok | Menyval 1 |
@@ -649,7 +735,7 @@ Uppgiften nämner `Scanner` som exempel på hur menyn läser inmatning. Projekte
 | --- | --- | --- |
 | Egen sorteringsalgoritm på titel för menyval 6, inte `Arrays.sort()`/`Collections.sort()` | Klart | `Library.sorteraPaTitel()` — bubble sort, beskriven under "Sortering i bokstavsordning" |
 | Statistik: medlem med flest aktiva lån, utan Streams/Collections | Klart | `Library.flestLan()` och menyval 7 — beskriven under "Statistik: medlemmen med flest aktiva lån" |
-| Dynamisk kapacitet: manuell array-växling utan `ArrayList` | Återstår | — |
-| Reflektion om Collections Framework i README | Återstår | — |
+| Dynamisk kapacitet: manuell array-växling utan `ArrayList` | Klart | `dynamiskArray()`, `dynamiskMember()`, `dynamiskLan()` — beskrivna under "Dynamisk kapacitet" |
+| Reflektion om Collections Framework i README | Klart | Avsnittet "Reflektion: hur Collections Framework hade förändrat lösningen" |
 
-Av VG-kraven är sorteringen och statistiken genomförda. De två återstående ingår inte i den här inlämningen.
+Samtliga VG-krav är genomförda.

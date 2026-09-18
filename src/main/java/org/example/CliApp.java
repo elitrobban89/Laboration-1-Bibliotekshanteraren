@@ -41,10 +41,8 @@ public class CliApp {
                     Book bok = new Book(titel, forfattare, isbn);
                     if (lib.laggTillBok(bok)) {
                         IO.println("Bok " + bok.titel() + " har lagts till");
-                    } else if (lib.hittaBok(isbn) != null) {
-                        IO.println("Bok med ISBN " + isbn + " finns redan.");
                     } else {
-                        IO.println("Biblioteket är fullt.");
+                        IO.println("Bok med ISBN " + isbn + " finns redan.");
                     }
                     break;
                 }
@@ -72,10 +70,8 @@ public class CliApp {
                     Member medlem = new Member(id, namn, 0);
                     if (lib.registreraMedlem(medlem)) {
                         IO.println("Medlem " + namn + " registrerad.");
-                    } else if (lib.hittaMedlem(id) != null) {
-                        IO.println("Medlem med medlems-id " + id + " finns redan.");
                     } else {
-                        IO.println("Medlemsregistret är fullt.");
+                        IO.println("Medlem med medlems-id " + id + " finns redan.");
                     }
                     break;
                 }
