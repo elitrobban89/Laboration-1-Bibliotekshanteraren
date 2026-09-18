@@ -178,12 +178,23 @@ public class CliApp {
                     }
                     break;
                 }
+                case "7": {
+                    Member flestLan = lib.flestLan();
+                    if (flestLan == null) {
+                        IO.println("Inga medlemmar i biblioteket.");
+                    } else if (flestLan.getAntalLan() == 0) {
+                        IO.println("Inga medlemmar har några lån.");
+                    } else {
+                        IO.println("Medlemmen med flest lån är " + flestLan.getNamn() + " (antal aktiva lån: " + flestLan.getAntalLan() + ")");
+                    }
+                    break;
+                }
                 case "e":
                     IO.println("Avslutar programmet");
                     running = false; //Avsluta programmet
                     break;
                 default:
-                    IO.println("Ogiltigt val: '" + val + "'. Välj 1-6 eller e.");
+                    IO.println("Ogiltigt val: '" + val + "'. Välj 1-7 eller e.");
             }
         } while (running);
     }
@@ -198,6 +209,7 @@ public class CliApp {
                        4. Lämna tillbaka bok
                        5. Sök bok (titel eller författare)
                        6. Visa alla böcker och status
+                       7. Statistik - Medlemmen med flest lån
                        e. Avsluta
                 """;
         IO.println(menyText);

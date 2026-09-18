@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sex menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort — det första av VG-kraven.
+Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sju menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort, och menyval 7 visar vilken medlem som har flest aktiva lån — två av VG-kraven.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -23,7 +23,7 @@ Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` 
 För väl godkänt:
 
 - [x] Egen sorteringsalgoritm (bubble sort) på titel för menyval 6
-- [ ] Statistik: medlem med flest aktiva lån
+- [x] Statistik: medlem med flest aktiva lån (menyval 7)
 - [ ] Dynamisk kapacitet: arrayer som växer när de blir fulla
 - [ ] Reflektion i README om Collections Framework
 
@@ -57,6 +57,7 @@ Bibliotekshanteraren
 4. Lämna tillbaka bok
 5. Sök bok (titel eller författare)
 6. Visa alla böcker och status
+7. Statistik - Medlemmen med flest lån
 e. Avsluta
 ```
 
@@ -518,6 +519,81 @@ break;
 Grenens avslutande `break` är nödvändig och inte bara god sed: utan den faller `case "5"` igenom till `case "6"` i `switch`-satsen, och användaren hade fått sina träffar följda av hela boklistan.
 
 Verifierat genom körning mot ett bibliotek med tre böcker: `pippi` i gemener hittar *Pippi Långstrump*, `ASTRID` i versaler hittar båda Lindgren-böckerna, `lejon` matchar mitt inne i ett ord, `zzz` ger beskedet om noll träffar, ett sökord med bara blanksteg avvisas av `isBlank()`, och `   ring   ` trimmas innan sökningen och hittar *Sagan om ringen*.
+### Statistik: medlemmen med flest aktiva lån
+
+VG-kravet säger att programmet ska hitta **och visa** den medlem som för tillfället har flest aktiva lån, utan Streams och utan Collections. Att funktionen ska *visa* något innebär att den måste vara åtkomlig för användaren, och i ett program vars enda gränssnitt är menyn betyder det ett nytt menyval. Statistiken ligger därför på alternativ 7.
+
+Formuleringen "hittar och visar" delar sig i två ansvar, som hamnar på var sitt ställe enligt samma princip som resten av projektet — `Library` svarar, `CliApp` pratar:
+
+```java
+/**
+ * Statistikfunktion som skall nås via nytt menyval 7 implementeras i CliApp (krav för VG)
+ * Metod som hittar medlemmen med flest lån
+ * Om man inte hittar några medlemmar returneras null så att programmet inte kraschar
+ */
+public Member flestLan() {
+    if (antalMedlemmar == 0) {
+        return null;
+    }
+    Member flestLan = medlemmar[0];
+    for (int i = 1; i < antalMedlemmar; i++) {
+        if (medlemmar[i].getAntalLan() > flestLan.getAntalLan()) {
+            flestLan = medlemmar[i];
+        }
+    }
+    return flestLan;
+}
+```
+
+**Ingen parameter.** Till skillnad från `sorteraPaTitel()`, som tar emot den array den ska arbeta på, går den här metoden direkt på fältet `medlemmar`. Det är bibliotekets egna medlemmar som avses, och det finns ingen utomstående array som vore meningsfull att skicka in.
+
+**Räknaren fanns redan.** Ingen ny datastruktur behövdes. `Member.antalLan` hålls uppdaterad av `lanaBok()` och `aterlamnaBok()`, så statistiken kan läsas ur befintlig data i stället för att bokföras separat. Samma princip som statuslistan i menyval 6: härled i stället för att lagra, så kan uppgiften aldrig hamna i otakt med verkligheten.
+
+**Loopen börjar på index 1.** Plats 0 utses till mästare innan loopen startar, vilket gör att den första jämförelsen inte behöver göras mot medlemmen själv.
+
+**Kontrollen av tomt register är avsiktlig, inte kosmetisk.** Utan den hade `medlemmar[0]` lästs innan det var känt att någon fanns där. Med tomt register hade variabeln blivit `null`, och metoden hade råkat returnera rätt svar enbart därför att loopen aldrig kör ett varv — hade den kört ett enda skulle `flestLan.getAntalLan()` ha kastat en `NullPointerException`. Med kontrollen står avsikten i koden: tomt register ger `null`, och det är ett kontrakt som anroparen kan lita på.
+
+**Lika många lån.** Jämförelsen använder `>` och inte `>=`, vilket betyder att den medlem som ligger först i arrayen behåller förstaplatsen när flera har lika många lån. Det är ett medvetet val snarare än en slump: alternativet hade varit att returnera flera medlemmar, vilket kräver en array med okänd storlek — samma problem som `sokBok()` löser — för en upplysning som knappast motiverar det.
+
+Kravets "utan Streams/Collections" uppfylls automatiskt, eftersom projektet inte använder något av dem någonstans. En `Collections.max()` med en `Comparator` hade gjort samma sak på en rad.
+
+#### Menyvalet
+
+`CliApp` tar emot medlemmen och avgör hur svaret formuleras. Tre utfall behöver skiljas åt, och ordningen mellan dem är inte fri:
+
+```java
+Member flestLan = lib.flestLan();
+if (flestLan == null) {
+    IO.println("Inga medlemmar i biblioteket.");
+} else if (flestLan.getAntalLan() == 0) {
+    IO.println("Inga medlemmar har några lån.");
+} else {
+    IO.println("Medlemmen med flest lån är " + flestLan.getNamn() + " (antal aktiva lån: " + flestLan.getAntalLan() + ")");
+}
+```
+
+`null`-kontrollen måste stå först. Vore ordningen den omvända hade `flestLan.getAntalLan()` anropats på en `null`-referens så fort registret var tomt.
+
+Mellangrenen finns för att en rak max-loop annars ger ett tekniskt sant men missvisande svar. Med två registrerade medlemmar som inte lånat något svarade programmet först "Medlemmen med flest lån är Anna" — hon har flest, delat med alla andra — vilket en användare läser som att hon lånat böcker.
+
+Antalet lån skrivs ut tillsammans med namnet. Utan siffran blir menyvalet svårläst i praktiken: vid en körning där Anna gick från två lån till ett, och därmed hamnade lika med Bosse, var utskriften före och efter återlämningen ordagrant identisk. Formen "(antal aktiva lån: 1)" valdes framför "med 1 aktiva lån" eftersom den senare blir grammatiskt fel i singular.
+
+Tillägget av ett sjunde alternativ krävde också att `printMenu()` kompletterades och att `default`-grenens text ändrades från "Välj 1-6 eller e." till "Välj 1-7 eller e." — annars hade felmeddelandet beskrivit en meny som inte längre fanns.
+
+**Verifiering.** Körning med tomt register ger "Inga medlemmar i biblioteket.". Efter att Anna och Bosse registrerats utan lån ges "Inga medlemmar har några lån.". Efter tre utlåningar:
+
+```
+Medlemmen med flest lån är Anna (antal aktiva lån: 2)
+```
+
+och efter att en av Annas böcker lämnats tillbaka, när hon och Bosse har ett lån var:
+
+```
+Medlemmen med flest lån är Anna (antal aktiva lån: 1)
+```
+
+Anna behåller förstaplatsen vid lika, i enlighet med `>`-jämförelsen, och siffran gör förändringen synlig. Ett ogiltigt menyval svarar "Ogiltigt val: '8'. Välj 1-7 eller e.".
+
 ## Beskrivning av lösningen
 
 Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer med fast storlek, där en räknare per array håller reda på hur många platser som används.
@@ -572,8 +648,8 @@ Uppgiften nämner `Scanner` som exempel på hur menyn läser inmatning. Projekte
 | Krav i uppgiften | Status | Var det finns |
 | --- | --- | --- |
 | Egen sorteringsalgoritm på titel för menyval 6, inte `Arrays.sort()`/`Collections.sort()` | Klart | `Library.sorteraPaTitel()` — bubble sort, beskriven under "Sortering i bokstavsordning" |
-| Statistik: medlem med flest aktiva lån, utan Streams/Collections | Återstår | — |
+| Statistik: medlem med flest aktiva lån, utan Streams/Collections | Klart | `Library.flestLan()` och menyval 7 — beskriven under "Statistik: medlemmen med flest aktiva lån" |
 | Dynamisk kapacitet: manuell array-växling utan `ArrayList` | Återstår | — |
 | Reflektion om Collections Framework i README | Återstår | — |
 
-Av VG-kraven är sorteringen genomförd. De tre återstående ingår inte i den här inlämningen.
+Av VG-kraven är sorteringen och statistiken genomförda. De två återstående ingår inte i den här inlämningen.

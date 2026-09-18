@@ -169,4 +169,23 @@ public class Library {
         }
         return bocker;
     }
+
+
+    /**
+     * Statistikfunktion som skall nås via nytt menyval 7 implementeras i CliApp (krav för VG)
+     * Metod som hittar medlemmen med flest lån
+     * Om man inte hittar några medlemmar returneras null så att programmet inte kraschar
+     */
+    public Member flestLan() {
+        if (antalMedlemmar == 0) {
+            return null;
+        }
+        Member flestLan = medlemmar[0];
+        for (int i = 1; i < antalMedlemmar; i++) {
+            if (medlemmar[i].getAntalLan() > flestLan.getAntalLan()) {
+                flestLan = medlemmar[i];
+            }
+        }
+        return flestLan;
+    }
 }
