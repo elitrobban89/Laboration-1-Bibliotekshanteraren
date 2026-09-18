@@ -140,7 +140,7 @@ public class Library {
     }
 
     /**
-     * //Vi använder en kopia av Book arrayen för att kunna returnera en kopia av boklistan för användaren
+     * Vi använder en kopia av Book arrayen för att kunna returnera en kopia av boklistan för användaren
      *
      * @return
      */
@@ -150,5 +150,23 @@ public class Library {
             kopia[i] = boklista[i];
         }
         return kopia;
+    }
+
+    /**
+     * Egen sorteringsalgoritm (krav för VG)
+     * Obs tillämpas på vår kopia utav arrayen så vi inte påverkar den ursprungliga arrayen
+     * Stödjer menyval 6 men även 5 ifall det behövs
+     */
+    public Book[] sorteraPaTitel(Book[] bocker) {
+        for (int i=0; i<bocker.length - 1; i++) {
+            for (int j=0; j<bocker.length -1; j++) { //Bubble sort algoritm
+                if (bocker[j].titel().compareToIgnoreCase(bocker[j + 1].titel()) > 0) { //Obs här vi använder titel() istället för getTitle() ifrån Recordet Book. Vi ignorerar case sensitive
+                    Book temp = bocker[j];
+                    bocker[j] = bocker[j+1];
+                    bocker[j+1] = temp;
+                }
+            }
+        }
+        return bocker;
     }
 }

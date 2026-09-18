@@ -159,7 +159,7 @@ public class CliApp {
                     break;
                 }
                 case "6": {
-                    Book[] bocker = lib.getAllaBocker(); //Kör metoden inuti Library. Skapar kopia av boklistan
+                    Book[] bocker = lib.sorteraPaTitel(lib.getAllaBocker()); //Kör metoden inuti Library. Skapar kopia av boklistan. Bubble sort metod/algoritm anropas
 
                     if (bocker.length == 0) {
                         IO.println("Inga böcker i biblioteket.");
