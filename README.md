@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sex menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram.
+Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sex menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort — det första av VG-kraven.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -18,7 +18,14 @@ Programmet är funktionellt komplett för godkänt. `Book`, `Member` och `Loan` 
 - [x] Låna bok (menyval 3), med specifika felmeddelanden
 - [x] Lämna tillbaka bok (menyval 4)
 - [x] Sök bok på del av titel eller författare (menyval 5), skiftlägesokänsligt via egen sökloop
-- [x] Visa alla böcker med status (menyval 6)
+- [x] Visa alla böcker med status (menyval 6), sorterat i bokstavsordning på titel
+
+För väl godkänt:
+
+- [x] Egen sorteringsalgoritm (bubble sort) på titel för menyval 6
+- [ ] Statistik: medlem med flest aktiva lån
+- [ ] Dynamisk kapacitet: arrayer som växer när de blir fulla
+- [ ] Reflektion i README om Collections Framework
 
 ## Krav
 
@@ -369,6 +376,69 @@ Eftersom `hittaLan()` svarar på både om boken är utlånad och till vem, täck
 
 Ett tomt bibliotek fångas före loopen och ger beskedet "Inga böcker i biblioteket." i stället för tystnad.
 
+### Sortering i bokstavsordning
+
+VG-kravet säger att böckerna i menyval 6 ska visas i bokstavsordning på titel, och att sorteringen ska ske med en egen algoritm — inte `Arrays.sort()` eller `Collections.sort()`. Valet föll på bubble sort:
+
+```java
+public Book[] sorteraPaTitel(Book[] bocker) {
+    for (int i = 0; i < bocker.length - 1; i++) {
+        for (int j = 0; j < bocker.length - 1; j++) {
+            if (bocker[j].titel().compareToIgnoreCase(bocker[j + 1].titel()) > 0) {
+                Book temp = bocker[j];
+                bocker[j] = bocker[j + 1];
+                bocker[j + 1] = temp;
+            }
+        }
+    }
+    return bocker;
+}
+```
+
+**Parameter i stället för fältet.** Metoden tar emot en `Book[]` och sorterar den, i stället för att gå direkt på `boklista`. Utan parameter hade bibliotekets egen lagring byggts om som en bieffekt av att *visa* listan, och inmatningsordningen hade försvunnit permanent. Nu sorteras den kopia som `getAllaBocker()` redan lämnar ut, vilket gör att `boklista` är orörd efteråt — verifierat genom att läsa ut beståndet en andra gång efter sorteringen. Att metoden är oberoende av fältet betyder också att den kan återanvändas på träffarna från `sokBok()` utan en rad ny kod.
+
+Arrayer är objekt, så parametern bär en referens och inte en kopia av innehållet. Metoden skyddar alltså ingenting i sig själv — det är kopieringen i `getAllaBocker()` som gör upplägget säkert. `return bocker;` returnerar samma referens som kom in, vilket gör anropet i menyval 6 till en enda rad.
+
+**Hur bubble sort arbetar.** Innerloopen jämför två grannar i taget och byter plats på dem när de står i fel ordning. Efter ett helt varv har den största titeln bubblat hela vägen till sista platsen. Ytterloopen upprepar tills allt ligger rätt:
+
+```
+Varv 1:  [Sagan, Astrid, Pippi]   jämför Sagan/Astrid  → byt
+         [Astrid, Sagan, Pippi]   jämför Sagan/Pippi   → byt
+         [Astrid, Pippi, Sagan]   ← Sagan ligger nu rätt, sist
+
+Varv 2:  [Astrid, Pippi, Sagan]   jämför Astrid/Pippi  → rätt, gör inget
+```
+
+Bytet kräver en temp-variabel. Utan den skrivs den ena boken över av den andra innan den hunnit sparas undan, och en bok försvinner ur arrayen medan en annan dubbleras.
+
+Ytterloopen går till `length - 1` eftersom `n - 1` varv räcker — efter så många är varje element garanterat på plats. Innerloopen går till `length - 1` av ett helt annat skäl: den läser `bocker[j + 1]`, och utan avdraget pekar det sista steget utanför arrayen med en `ArrayIndexOutOfBoundsException` som följd.
+
+**Varför `compareToIgnoreCase` och inte `compareTo`.** `compareTo` jämför tecknens Unicode-värden, och där ligger samtliga versaler före samtliga gemener — `'Z'` är 90 medan `'b'` är 98. En bok med liten begynnelsebokstav hamnade därför efter alla böcker med stor:
+
+```
+Apelsin
+Citron
+Zebra
+banan     ← sorterat efter Z trots att b kommer före z
+```
+
+`compareToIgnoreCase` löser det utan att `toLowerCase()` behöver anropas på båda sidor, vilket är samma problem som `sokBok()` löser på det andra sättet.
+
+**Känd begränsning: sorteringen är inte svensk kollationering.** Jämförelsen bygger fortfarande på Unicode-värden, och där ligger å, ä och ö efter z — vilket råkar stämma med svensk bokstavsordning. Inbördes gör de det inte: Unicode ger `ä` (0x00E4) före `å` (0x00E5), medan svensk ordning är å, ä, ö. En korrekt lösning hade krävt `java.text.Collator` med svensk `Locale`. Det är medvetet utelämnat, eftersom uppgiften handlar om att skriva algoritmen själv och inte om språkriktig kollationering.
+
+**Komplexitet.** Bubble sort gör i storleksordning `n²` jämförelser. `Arrays.sort()` använder en betydligt effektivare algoritm i `n log n`, vilket för hundra böcker är skillnaden mellan runt 10 000 och runt 700 jämförelser. För ett bibliotek av den här storleken är det utan praktisk betydelse. Innerloopen hade dessutom kunnat krympa med ett steg per avklarat varv, eftersom slutet av arrayen redan är färdigsorterat — `j < bocker.length - 1 - i`. Det halverar ungefär antalet jämförelser men ändrar inte storleksordningen, och är utelämnat till förmån för en algoritm som är lättare att läsa.
+
+**Verifiering.** Sorteringsmetoden kördes mot sju fall: tom array och en enda bok passerar utan att looparna kör ett enda varv, redan sorterad och omvänd ordning ger båda samma resultat, dubbletter behålls, och blandat skiftläge sorteras rätt. Därefter kördes hela programmet med böckerna inmatade i ordningen Sagan om ringen, astrid bok, Pippi, Äpple, med Pippi utlånad till Anna:
+
+```
+astrid bok - Lindgren - 222 - Tillgänglig
+Pippi - Lindgren - 333 - Utlånad till Anna
+Sagan om ringen - Tolkien - 111 - Tillgänglig
+Äpple - Okand - 444 - Tillgänglig
+```
+
+Listan är sorterad, `astrid bok` ligger först trots liten begynnelsebokstav, `Äpple` sist, och lånestatusen följer med rätt bok — statusen slås upp på isbn vid utskriften och påverkas därför inte av att ordningen ändrats.
+
 ### Sökning
 
 Menyval 5 ska hitta böcker på **del av** titeln eller författaren, skiftlägesokänsligt. Det låter som en uppgift för `hittaBok()`, men den metoden duger inte, och skillnaderna är just det som formar `sokBok()`:
@@ -497,4 +567,13 @@ Jag har skrivit och committat all Java-kod själv och rättat varje fel för han
 
 Uppgiften nämner `Scanner` som exempel på hur menyn läser inmatning. Projektet använder `IO.readln()` i stället, av robusthetsskäl som redovisas under "Inläsning med `java.lang.IO` i stället för `Scanner`". Funktionellt är de likvärdiga här — båda läser en rad text i taget från standard in, och inget värde tolkas som tal.
 
-VG-kraven — egen sorteringsalgoritm, statistik över flest aktiva lån och dynamisk kapacitet — ingår inte i den här inlämningen.
+## Kravuppfyllnad (VG)
+
+| Krav i uppgiften | Status | Var det finns |
+| --- | --- | --- |
+| Egen sorteringsalgoritm på titel för menyval 6, inte `Arrays.sort()`/`Collections.sort()` | Klart | `Library.sorteraPaTitel()` — bubble sort, beskriven under "Sortering i bokstavsordning" |
+| Statistik: medlem med flest aktiva lån, utan Streams/Collections | Återstår | — |
+| Dynamisk kapacitet: manuell array-växling utan `ArrayList` | Återstår | — |
+| Reflektion om Collections Framework i README | Återstår | — |
+
+Av VG-kraven är sorteringen genomförd. De tre återstående ingår inte i den här inlämningen.
