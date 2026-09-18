@@ -14,7 +14,7 @@ public class Library {
 
     /**
      * Startstorlekar för arrayerna, inte maxvärden (krav för VG: dynamisk kapacitet).
-     * När en array blir full byts den ut mot en dubbelt så stor via dynamiskArray(),
+     * När en array blir full byts den ut mot en dubbelt så stor via dynamiskBok(),
      * dynamiskMember() respektive dynamiskLan(), och programmet fortsätter.
      * Värdena är små med avsikt, så att växlingen går att visa utan att först mata in hundra böcker.
      */
@@ -126,7 +126,7 @@ public class Library {
         if (hittaBok(bok.isbn()) != null) return false; //Dublettkontroll om boken redan finns i arrayen
 
         if (antalBocker >= boklista.length) { //Om arrayen är full anropa ny arrayen som växer dynamiskt
-            boklista = dynamiskArray(boklista);
+            boklista = dynamiskBok(boklista);
         }
         boklista[antalBocker] = bok; //Lagra böckerna i ny array
         antalBocker++;
@@ -204,7 +204,7 @@ public class Library {
      * (Krav för VG)
      * Dynamisk kapacitet metod för Böcker array
      */
-    private Book[] dynamiskArray(Book[] gammal) {
+    private Book[] dynamiskBok(Book[] gammal) {
         Book[] ny = new Book[gammal.length * 2];//Dubblera storleken på gamla arrayen--> ny array
         for (int i = 0; i < gammal.length; i++) { //kopiera till ny array
             ny[i] = gammal[i];

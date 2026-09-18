@@ -603,7 +603,7 @@ VG-kravet säger att programmet ska skapa en ny, större array, kopiera över be
 **Växa-metoden.** Samma tre steg för varje typ: skapa dubbelt så stor array, kopiera över med en egen loop, returnera den nya.
 
 ```java
-private Book[] dynamiskArray(Book[] gammal) {
+private Book[] dynamiskBok(Book[] gammal) {
     Book[] ny = new Book[gammal.length * 2];
     for (int i = 0; i < gammal.length; i++) {
         ny[i] = gammal[i];
@@ -618,7 +618,7 @@ Kopieringen sker med en handskriven loop, inte med `Arrays.copyOf()` eller `Syst
 
 ```java
 if (antalBocker >= boklista.length) {
-    boklista = dynamiskArray(boklista);
+    boklista = dynamiskBok(boklista);
 }
 boklista[antalBocker] = bok;
 antalBocker++;
@@ -640,7 +640,7 @@ Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 4 out
 
 Fem böcker gick att lägga in, men `loans` hade fortfarande fyra platser. Kravet nämner bara bok- och medlemsarrayen, men lånearrayen måste följa med — annars introducerar VG-kravet en regression i G-kravet att programmet aldrig ska krascha. Fullkontrollen ligger sist i `lanaBok()`, efter alla fyra `return false`-kontrollerna, så att arrayen inte växer i onödan när ett lån nekas.
 
-**Tre nästan identiska metoder.** `dynamiskArray()`, `dynamiskMember()` och `dynamiskLan()` skiljer sig åt på ett typnamn på tre ställen vardera. Java-arrayer är inte generiska, så en metod som tar `Book[]` kan inte ta emot `Member[]`. Utan Generics finns ingen väg runt det. Duplikationen diskuteras vidare under "Reflektion: hur Collections Framework hade förändrat lösningen".
+**Tre nästan identiska metoder.** `dynamiskBok()`, `dynamiskMember()` och `dynamiskLan()` skiljer sig åt på ett typnamn på tre ställen vardera. Java-arrayer är inte generiska, så en metod som tar `Book[]` kan inte ta emot `Member[]`. Utan Generics finns ingen väg runt det. Duplikationen diskuteras vidare under "Reflektion: hur Collections Framework hade förändrat lösningen".
 
 **Verifiering.** Tjugo böcker matades in, vilket kräver tre växlingar (4 → 8 → 16 → 32). Samtliga tjugo listas därefter av menyval 6, i bokstavsordning och utan `null`-platser. Tolv medlemmar gav tre växlingar av medlemsarrayen (2 → 4 → 8 → 16), och statistiken hittade rätt person på plats nio i den växta arrayen. Tjugo samtidiga lån gav tre växlingar av lånearrayen, med rätt låntagare på varje bok i statuslistan. Sökning, återlämning och statistik fungerade oförändrat efteråt, och inga undantag uppstod. Även den tidigare gränsen testades: 101 böcker och 51 medlemmar läggs numera in utan att något avvisas.
 
@@ -672,12 +672,12 @@ Uppgiften förbjuder Collections Framework, Generics och Streams. Nedan är vad 
 
 **Räknaren hade försvunnit.** Varje array i `Library` måste kompletteras med ett heltal som håller reda på hur många platser som används: `antalBocker`, `antalMedlemmar`, `antalAktivaLan`. Skillnaden mellan arrayens *storlek* och dess *innehåll* går igen i varje metod — `hittaBok()` måste loopa till `antalBocker` och inte till `boklista.length`, annars kraschar den på `null`-platserna i slutet. Med en `ArrayList` hade `size()` varit räknaren, och frågan hade aldrig uppstått.
 
-**Dynamisk kapacitet är `ArrayList`s inre mekanik.** VG-kravet om manuell array-växling går ut på att skapa en större array, kopiera över och peka om. Det är i princip exakt vad `ArrayList.add()` gör när den underliggande arrayen tar slut — skillnaden är att `ArrayList` växer med femtio procent i stället för att fördubbla, och att den använder `System.arraycopy()`. Med Collections hade hela det kravet reducerats till att inte tänka på saken. Att ha skrivit `dynamiskArray()` för hand gör det däremot begripligt *varför* en `ArrayList` kan bli dyr när man lägger till många element: varje växling kopierar om allt som redan finns.
+**Dynamisk kapacitet är `ArrayList`s inre mekanik.** VG-kravet om manuell array-växling går ut på att skapa en större array, kopiera över och peka om. Det är i princip exakt vad `ArrayList.add()` gör när den underliggande arrayen tar slut — skillnaden är att `ArrayList` växer med femtio procent i stället för att fördubbla, och att den använder `System.arraycopy()`. Med Collections hade hela det kravet reducerats till att inte tänka på saken. Att ha skrivit `dynamiskBok()` för hand gör det däremot begripligt *varför* en `ArrayList` kan bli dyr när man lägger till många element: varje växling kopierar om allt som redan finns.
 
-**Tre identiska metoder i stället för noll.** Den tydligaste kostnaden. Java-arrayer är inte generiska, så en metod som tar emot `Book[]` kan inte ta emot `Member[]` — kompilatorn vägrar. Resultatet är `dynamiskArray()`, `dynamiskMember()` och `dynamiskLan()`, som är teckenidentiska så när som på ett typnamn på tre ställen vardera:
+**Tre identiska metoder i stället för noll.** Den tydligaste kostnaden. Java-arrayer är inte generiska, så en metod som tar emot `Book[]` kan inte ta emot `Member[]` — kompilatorn vägrar. Resultatet är `dynamiskBok()`, `dynamiskMember()` och `dynamiskLan()`, som är teckenidentiska så när som på ett typnamn på tre ställen vardera:
 
 ```java
-private Book[] dynamiskArray(Book[] gammal) {
+private Book[] dynamiskBok(Book[] gammal) {
     Book[] ny = new Book[gammal.length * 2];
     for (int i = 0; i < gammal.length; i++) {
         ny[i] = gammal[i];
@@ -735,7 +735,7 @@ Uppgiften nämner `Scanner` som exempel på hur menyn läser inmatning. Projekte
 | --- | --- | --- |
 | Egen sorteringsalgoritm på titel för menyval 6, inte `Arrays.sort()`/`Collections.sort()` | Klart | `Library.sorteraPaTitel()` — bubble sort, beskriven under "Sortering i bokstavsordning" |
 | Statistik: medlem med flest aktiva lån, utan Streams/Collections | Klart | `Library.flestLan()` och menyval 7 — beskriven under "Statistik: medlemmen med flest aktiva lån" |
-| Dynamisk kapacitet: manuell array-växling utan `ArrayList` | Klart | `dynamiskArray()`, `dynamiskMember()`, `dynamiskLan()` — beskrivna under "Dynamisk kapacitet" |
+| Dynamisk kapacitet: manuell array-växling utan `ArrayList` | Klart | `dynamiskBok()`, `dynamiskMember()`, `dynamiskLan()` — beskrivna under "Dynamisk kapacitet" |
 | Reflektion om Collections Framework i README | Klart | Avsnittet "Reflektion: hur Collections Framework hade förändrat lösningen" |
 
 Samtliga VG-krav är genomförda.
