@@ -63,10 +63,11 @@ public class Library {
      * dock så använder vi här sökord istället för både titel och författare
      */
     public Book[] sokBok(String sokord) {
+        String sokordGemener = sokord.toLowerCase(); //Räkna om sökordet en gång, inte en gång per bok
         Book[] traffar = new Book[antalBocker];
         int antalTraffar = 0;
         for (int i = 0; i < antalBocker; i++) {
-            if (boklista[i].titel().toLowerCase().contains(sokord.toLowerCase()) || boklista[i].forfattare().toLowerCase().contains(sokord.toLowerCase())) {
+            if (boklista[i].titel().toLowerCase().contains(sokordGemener) || boklista[i].forfattare().toLowerCase().contains(sokordGemener)) {
                 traffar[antalTraffar] = boklista[i];
                 antalTraffar++;
             }
@@ -111,7 +112,7 @@ public class Library {
         if (hittaMedlem(medlem.getId()) != null) return false;
 
         if (antalMedlemmar >= medlemmar.length) { //Om arrayen är full använd dynamisk Member array istället
-            medlemmar=dynamiskMember(medlemmar); //Fältet medlemmar pekar om på ny array
+            medlemmar = dynamiskMember(medlemmar); //Fältet medlemmar pekar om på ny array
         }
         medlemmar[antalMedlemmar] = medlem;
         antalMedlemmar++;
@@ -153,7 +154,7 @@ public class Library {
     /**
      * Vi använder en kopia av Book arrayen för att kunna returnera en kopia av boklistan för användaren
      *
-     * @return
+     * @return en ny array med exakt antalBocker platser; ändringar i den påverkar inte boklista
      */
     public Book[] getAllaBocker() {
         Book[] kopia = new Book[antalBocker];
@@ -191,13 +192,13 @@ public class Library {
         if (antalMedlemmar == 0) {
             return null;
         }
-        Member flestLan = medlemmar[0];
+        Member flest = medlemmar[0];
         for (int i = 1; i < antalMedlemmar; i++) {
-            if (medlemmar[i].getAntalLan() > flestLan.getAntalLan()) {
-                flestLan = medlemmar[i];
+            if (medlemmar[i].getAntalLan() > flest.getAntalLan()) {
+                flest = medlemmar[i];
             }
         }
-        return flestLan;
+        return flest;
     }
 
     /**
