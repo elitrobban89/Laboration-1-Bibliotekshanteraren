@@ -4,7 +4,7 @@ Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, m
 
 ## Status
 
-Programmet är funktionellt komplett för både godkänt och väl godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift. Samtliga sju menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort, menyval 7 visar vilken medlem som har flest aktiva lån, och alla tre arrayerna växer automatiskt när de blir fulla. Samtliga VG-krav är uppfyllda.
+Programmet är funktionellt komplett för både godkänt och väl godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift, med en egen metod per menyval. Samtliga sju menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort, menyval 7 visar vilken medlem som har flest aktiva lån, och alla tre arrayerna växer automatiskt när de blir fulla. Samtliga VG-krav är uppfyllda.
 
 - [x] Meny med loop och avslut
 - [x] Robust felhantering av menyval (ogiltig inmatning, tom ström)
@@ -67,7 +67,7 @@ Skriv siffran för önskat alternativ och tryck Enter. Skriv `e` för att avslut
 
 Menyn tar emot all inmatning som text och tolkar den aldrig som ett tal, så bokstäver där siffror förväntas kan inte krascha programmet.
 
-- Ett val som inte finns i menyn (t.ex. `ghg` eller `9`) ger meddelandet `Ogiltigt val: '...'. Välj 1-6 eller e.` och menyn visas på nytt.
+- Ett val som inte finns i menyn (t.ex. `ghg` eller `9`) ger meddelandet `Ogiltigt val: '...'. Välj 1-7 eller e.` och menyn visas på nytt.
 - Om inströmmen tar slut (Ctrl+Z i Windows, Ctrl+D i Linux/macOS, eller pipad indata) avslutas programmet kontrollerat i stället för att kasta `NullPointerException`.
 
 #### Inläsning med `java.lang.IO` i stället för `Scanner`
@@ -81,17 +81,19 @@ Funktionellt är de likvärdiga för den här uppgiften — båda läser en rad 
 
 #### Validering av inmatade fält
 
-Menyval 1, 2 och 3 läser fritext från användaren. Varje block kör samma kedja innan värdena används:
+Menyval 1–5 läser fritext från användaren. Varje menyvalsmetod kör samma kedja innan värdena används:
 
 ```java
-if (titel == null || forfattare == null || isbn == null) { ... break; }   // tom ström
+if (titel == null || forfattare == null || isbn == null) { ... return; }   // tom ström
 
-titel = titel.trim();                                                     // putsa kanterna
+titel = titel.trim();                                                      // putsa kanterna
 forfattare = forfattare.trim();
 isbn = isbn.trim();
 
-if (titel.isBlank() || forfattare.isBlank() || isbn.isBlank()) { ... break; }   // tomt fält
+if (titel.isBlank() || forfattare.isBlank() || isbn.isBlank()) { ... return; }   // tomt fält
 ```
+
+`return` avbryter metoden, och programmet går tillbaka till menyn.
 
 Ordningen är tvingande. `null`-kontrollen måste komma först, eftersom `null.trim()` skulle kasta just det undantag kontrollen finns för att undvika. Trimningen måste komma före `isBlank()`, så att ett fält med bara blanksteg blir tomt och fångas.
 
@@ -124,11 +126,58 @@ Sedan arrayerna växer dynamiskt är dubbletten det enda skälet kvar till att d
 | Okänd bok, okänd medlem, utlånad bok, nått lånetak | Egna felmeddelanden via `else if`-kedjan |
 | Tomt sökord i menyval 5 | Avvisas av `isBlank()`; annars hade `contains("")` matchat varje bok |
 
+## Menyn: en metod per menyval
+
+Från början låg all kod för varje menyval direkt i `switch`-satsen i `main`. `main` blev då nästan 200 rader lång, och det var svårt att se programflödet. Nu anropar varje `case` en egen metod, och switchen blir en innehållsförteckning:
+
+```java
+switch (val) {
+    case "1":
+        laggTillBok(lib);
+        break;
+    case "2":
+        registreraMedlem(lib);
+        break;
+    ...
+    case "7":
+        visaStatistik(lib);
+        break;
+    case "e":
+        IO.println("Avslutar programmet");
+        running = false;
+        break;
+    default:
+        IO.println("Ogiltigt val: '" + val + "'. Välj 1-7 eller e.");
+}
+```
+
+| Menyval | Metod i `CliApp` | Anropar i `Library` |
+| --- | --- | --- |
+| 1 | `laggTillBok(lib)` | `laggTillBok()` |
+| 2 | `registreraMedlem(lib)` | `registreraMedlem()` |
+| 3 | `lanaBok(lib)` | `lanaBok()` |
+| 4 | `lamnaTillbakaBok(lib)` | `aterlamnaBok()` |
+| 5 | `sokBok(lib)` | `sokBok()` |
+| 6 | `visaAllaBocker(lib)` | `getAllaBocker()`, `sorteraPaTitel()` |
+| 7 | `visaStatistik(lib)` | `flestLan()` |
+
+Metoderna ligger i `CliApp` och inte i `Library`, eftersom de läser inmatning och skriver ut svar. Det är gränssnittsarbete. Uppdelningen `Library` svarar, `CliApp` pratar gäller därför fortfarande. Vissa metoder har samma namn i båda klasserna, men de gör olika saker: `CliApp.laggTillBok()` frågar användaren och skriver ut resultatet, och `Library.laggTillBok()` lägger in boken i arrayen.
+
+Tre saker styr hur metoderna är skrivna:
+
+1. **`private static`.** `main` är `static`, så metoderna den anropar måste också vara det. De är `private` eftersom ingen annan klass behöver dem.
+2. **`lib` skickas som parameter.** `Library`-objektet skapas som en lokal variabel i `main` och syns inte i andra metoder. Därför får varje metod biblioteket som argument.
+3. **`break` blev `return`.** Inne i en egen metod finns ingen `switch` att hoppa ur, så de tidiga utgångarna vid felaktig inmatning använder `return` i stället. `break` finns bara kvar i switchen, efter varje metodanrop.
+
+`case "e"` är inte flyttat till en egen metod. Det ändrar `running`, som är en lokal variabel i `main`. En separat metod kan inte ändra den direkt.
+
+**Verifiering.** Refaktoreringen ändrar inget beteende. Programmet kördes efteråt med ett testskript som gick igenom alla sju menyval, med både lyckade fall och felfall: dubbletter, tomma fält, okänd bok eller medlem, redan utlånad bok, sökning utan träff, tomt bibliotek och tomt register. Alla gav samma svar som före ändringen.
+
 ## Projektstruktur
 
 ```
 src/main/java/org/example/
-├── CliApp.java   # meny, inläsning och programloop
+├── CliApp.java   # meny, programloop och en metod per menyval
 ├── Book.java     # record: titel, författare, isbn
 ├── Member.java   # klass: id, namn, antal aktiva lån
 ├── Loan.java     # record: kopplar en medlem till en lånad bok
@@ -498,25 +547,24 @@ Noll träffar ger därför en tom array, inte `null`. `CliApp` kan då kolla `tr
 
 #### Menyvalet
 
-`case "5"` kör samma valideringskedja som övriga inmatningsblock — `null` → `trim()` → `isBlank()` — och anropar sedan metoden:
+Metoden `sokBok(lib)` i `CliApp` kör samma valideringskedja som övriga menyval — `null` → `trim()` → `isBlank()` — och anropar sedan `Library.sokBok()`:
 
 ```java
 Book[] traffar = lib.sokBok(sokord);
 if (traffar.length == 0) {
     IO.println("Inga böcker hittades med sökordet: " + sokord);
-    break;
+    return;
 }
 for (Book bok : traffar) {
     IO.println(bok.titel() + " - " + bok.forfattare() + " - " + bok.isbn());
 }
-break;
 ```
 
 `isBlank()`-kontrollen bär extra tyngd just här. Ett tomt sökord hade gjort varje `contains("")` sant, och sökningen hade svarat med hela biblioteket i stället för ett felmeddelande.
 
 `for`-each går att använda utan risk, eftersom `sokBok()` redan kopierat ner arrayen till exakt antalet träffar — samma skäl som gör `getAllaBocker()` säker att loopa över i menyval 6.
 
-Grenens avslutande `break` är nödvändig och inte bara god sed: utan den faller `case "5"` igenom till `case "6"` i `switch`-satsen, och användaren hade fått sina träffar följda av hela boklistan.
+`break` efter `sokBok(lib);` i switchen är nödvändig och inte bara god sed. Utan den faller `case "5"` igenom till `case "6"`, och användaren hade fått sina träffar följda av hela boklistan.
 
 Verifierat genom körning mot ett bibliotek med tre böcker: `pippi` i gemener hittar *Pippi Långstrump*, `ASTRID` i versaler hittar båda Lindgren-böckerna, `lejon` matchar mitt inne i ett ord, `zzz` ger beskedet om noll träffar, ett sökord med bara blanksteg avvisas av `isBlank()`, och `   ring   ` trimmas innan sökningen och hittar *Sagan om ringen*.
 ### Statistik: medlemmen med flest aktiva lån
@@ -559,7 +607,7 @@ Kravets "utan Streams/Collections" uppfylls automatiskt, eftersom projektet inte
 
 #### Menyvalet
 
-`CliApp` tar emot medlemmen och avgör hur svaret formuleras. Tre utfall behöver skiljas åt, och ordningen mellan dem är inte fri:
+Metoden `visaStatistik(lib)` i `CliApp` tar emot medlemmen och avgör hur svaret formuleras. Tre utfall behöver skiljas åt, och ordningen mellan dem är inte fri:
 
 ```java
 Member flestLan = lib.flestLan();
@@ -646,7 +694,7 @@ Fem böcker gick att lägga in, men `loans` hade fortfarande fyra platser. Krave
 
 ## Beskrivning av lösningen
 
-Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. Data lagras i arrayer där en räknare per array håller reda på hur många platser som används, och där arrayen byts ut mot en dubbelt så stor när den blir full.
+Programmet är en kommandoradsapplikation som hanterar böcker, medlemmar och lån. Lösningen består av två lager: en datamodell (`Book`, `Member`, `Loan`) och en lagringsklass (`Library`) som äger reglerna, samt ett gränssnittslager (`CliApp`) som sköter meny, inläsning och utskrift. I `CliApp` har varje menyval en egen metod, och `main` innehåller bara menyloopen. Data lagras i arrayer där en räknare per array håller reda på hur många platser som används, och där arrayen byts ut mot en dubbelt så stor när den blir full.
 
 Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut något. All kommunikation går genom metodanrop med returvärden.
 
@@ -655,6 +703,8 @@ Gränssnittet anropar aldrig arrayerna direkt, och `Library` skriver aldrig ut n
 **Record kontra klass.** Det viktigaste valet i projektet. `Book` och `Loan` blev records eftersom de är oföränderliga värdetyper — en bok *är* sin titel, författare och isbn, och ett lån *är* kopplingen mellan en bok och en medlem. `Member` blev en vanlig klass eftersom antalet aktiva lån ändras över tid medan medlemmen behåller sin identitet. Skillnaden är inte bara stilistisk: i en record ingår alla fält i den genererade `equals()`, så samma medlem med olika antal lån hade räknats som två olika medlemmar. Som klass jämförs objekt på referens och medlemmar slås upp på `getId()`.
 
 **Ansvarsfördelning.** `Library` svarar, `CliApp` pratar. `farLana()` returnerar `true`/`false` i stället för att skriva ut ett meddelande, och `laggTillBok()` returnerar `false` när arrayen är full i stället för att krascha. Det gör reglerna testbara oberoende av terminalen, och felmeddelandena kan formuleras på ett enda ställe.
+
+**En metod per menyval.** När all kod låg direkt i `switch`-satsen blev `main` lång, och samma variabelnamn (`isbn`) fanns i flera `case`-block. Då krävdes klamrar runt varje block för att hålla isär dem. Med en metod per menyval får varje menyval ett eget namn, egna lokala variabler och en egen Javadoc-kommentar, och `main` visar bara programflödet. Priset är att `lib` måste skickas med som parameter till varje metod.
 
 **Objektreferenser i `Loan`.** `Loan` håller `Member` och `Book` direkt i stället för id-strängar. Det ger typsäkerhet — kompilatorn hindrar att ett isbn skickas där ett medlems-id ska vara — och slipper uppslagningar vid varje utskrift. Viktigast är att `lan.member()` är samma objekt som ligger i medlemsarrayen, så lånräknaren aldrig kan hamna i otakt mellan de två.
 
