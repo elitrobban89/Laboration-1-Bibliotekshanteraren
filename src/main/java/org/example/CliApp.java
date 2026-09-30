@@ -16,32 +16,25 @@ public class CliApp {
             }
             val = val.trim(); //Vi trimmar även val så man inte får in ett blanksteg i slutet av menyalternativet
             switch (val) {
-                case "1":
+                case "1"->
                     laggTillBok(lib);
-                    break;
-                case "2":
+                case "2"->
                     registreraMedlem(lib);
-                    break;
-                case "3":
+                case "3"->
                     lanaBok(lib);
-                    break;
-                case "4":
+                case "4"->
                     lamnaTillbakaBok(lib);
-                    break;
-                case "5":
+                case "5"->
                     sokBok(lib);
-                    break;
-                case "6":
+                case "6"->
                     visaAllaBocker(lib);
-                    break;
-                case "7":
+                case "7"->
                     visaStatistik(lib);
-                    break;
-                case "e":
+                case "e"->{
                     IO.println("Avslutar programmet");
                     running = false; //Avsluta programmet
-                    break;
-                default:
+                }
+                default->
                     IO.println("Ogiltigt val: '" + val + "'. Välj 1-7 eller e.");
             }
         } while (running);
