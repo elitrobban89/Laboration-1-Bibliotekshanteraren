@@ -2,6 +2,10 @@
 
 Ett enkelt kommandoradsprogram i Java för att hantera ett bibliotek: böcker, medlemmar samt lån och återlämning.
 
+> **Prova i webbläsaren:** [elitrobban.se/bibliotekshanteraren-och-budgethanteraren](https://elitrobban.se/bibliotekshanteraren-och-budgethanteraren/)
+> Koden i det här repot byggs och körs oförändrad på servern. Terminalen på sidan skickar det du skriver till programmet.
+> Webbtjänsten finns i [Java-labbar](https://github.com/elitrobban89/Java-labbar).
+
 ## Status
 
 Programmet är funktionellt komplett för både godkänt och väl godkänt. `Book`, `Member` och `Loan` utgör datamodellen, `Library` håller arrayerna och äger reglerna, och `CliApp` sköter meny, inläsning och utskrift, med en egen metod per menyval. Samtliga sju menyval är inkopplade: böcker och medlemmar kan läggas till, böcker lånas ut och lämnas tillbaka, beståndet listas med aktuell utlåningsstatus, och sökningen hittar böcker på del av titel eller författare utan hänsyn till versaler. Vid utlåning visas ett återlämningsdatum tre veckor fram. Listningen i menyval 6 sorteras i bokstavsordning på titel med en egen bubble sort, menyval 7 visar vilken medlem som har flest aktiva lån, och alla tre arrayerna växer automatiskt när de blir fulla. Samtliga VG-krav är uppfyllda.
